@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AS MART - Quản lý Sản xuất & Kiểm kê Bánh mì</title>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- SheetJS (Đọc & Xuất file Excel .xlsx trực tiếp) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --sidebar-bg: #263544;
+      --sidebar-hover: #1d2834;
+      --sidebar-active: #33475b;
+      --primary: #0d6efd;
+      --primary-hover: #0b5ed7;
+      --success: #198754;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --info: #0dcaf0;
+      --teal: #00c292;
+      --bg-body: #f4f7f6;
+      --text-main: #212529;
+      --text-muted: #6c757d;
+      --border-color: #dee2e6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-size: 14px;
+      overflow-x: hidden;
+    }
+
+    /* ================= LOGIN SCREEN ================= */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1d2834 0%, #263544 100%);
+      padding: 15px;
+    }
+    .login-card {
+      background: #fff;
+      width: 100%;
+      max-width: 410px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      padding: 28px 24px;
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+    .login-logo h1 {
+      font-size: 24px;
+      color: var(--sidebar-bg);
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    .login-logo p {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    /* ================= MAIN LAYOUT ================= */
+    #app-container {
+      display: none;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR CHUẨN AS MART */
+    .sidebar {
+      width: 240px;
+      background-color: var(--sidebar-bg);
+      color: #d7dfe3;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      transition: transform 0.25s ease;
+    }
+    .sidebar-brand {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      letter-spacing: 0.5px;
+    }
+    .sidebar-user {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .sidebar-user .user-name {
+      color: #fff;
+      font-weight: bold;
+      font-size: 13.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .role-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      background-color: var(--teal);
+      color: #fff;
+      border-radius: 4px;
+    }
+    .branch-badge {
+      display: inline-block;
+      margin-top: 6px;
+      margin-left: 4px;
+      padding: 2px 7px;
+      font-size: 11px;
+      background-color: rgba(255,255,255,0.15);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .sidebar-menu {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+      list-style: none;
+    }
+    .sidebar-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      color: #b8c7ce;
+      text-decoration: none;
+      font-size: 13.5px;
+      transition: all 0.15s;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-menu li a i {
+      width: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .sidebar-menu li a:hover {
+      background-color: var(--sidebar-hover);
+      color: #fff;
+    }
+    .sidebar-menu li a.active {
+      background-color: var(--sidebar-active);
+      color: #fff;
+      font-weight: bold;
+      border-left-color: var(--teal);
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 0;
+    }
+    .sidebar-footer a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      text-decoration: none;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .sidebar-footer a.change-pass { color: #ffc107; }
+    .sidebar-footer a.logout { color: #ff6b6b; }
+    .sidebar-footer a:hover { background-color: var(--sidebar-hover); }
+
+    /* MAIN CONTENT AREA */
+    .main-wrapper {
+      margin-left: 240px;
+      padding: 18px 22px 75px 22px;
+      min-height: 100vh;
+      width: calc(100% - 240px);
+    }
+
+    /* MOBILE TOPBAR & BOTTOM NAV */
+    .mobile-topbar {
+      display: none;
+      background-color: var(--sidebar-bg);
+      color: #fff;
+      padding: 10px 15px;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 900;
+    }
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid var(--border-color);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+      z-index: 950;
+      justify-content: space-around;
+      padding: 6px 0;
+    }
+    .mobile-bottom-nav a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px 6px;
+      cursor: pointer;
+    }
+    .mobile-bottom-nav a i {
+      font-size: 17px;
+      margin-bottom: 3px;
+    }
+    .mobile-bottom-nav a.active {
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    /* BREADCRUMB & HEADER */
+    .breadcrumb {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .breadcrumb span.link {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .page-title {
+      font-size: 21px;
+      font-weight: bold;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* CARDS & FILTER BAR */
+    .card {
+      background: #fff;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+    }
+    .filter-group {
+      flex: 1;
+      min-width: 150px;
+    }
+    .filter-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+    .form-control, .form-select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13.5px;
+      border: 1px solid #ced4da;
+      border-radius: 5px;
+      background-color: #fff;
+      outline: none;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(13,110,253,0.15);
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      font-weight: bold;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.05s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-primary { background-color: var(--primary); color: #fff; }
+    .btn-success { background-color: var(--success); color: #fff; }
+    .btn-warning { background-color: var(--warning); color: #212529; }
+    .btn-danger { background-color: var(--danger); color: #fff; }
+    .btn-secondary { background-color: #6c757d; color: #fff; }
+    .btn-outline { background-color: #fff; border: 1px solid #ced4da; color: #333; }
+    .btn-sm { padding: 5px 8px; font-size: 12px; border-radius: 4px; }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: #fff;
+      border-radius: 6px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--primary);
+      border-top: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .kpi-card .kpi-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .kpi-card .kpi-value {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 6px;
+      color: #1e293b;
+    }
+    .kpi-card .kpi-sub {
+      font-size: 12px;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+
+    /* NATIVE TABLES & COPYABLE CELLS */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table.native-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    table.native-table th, table.native-table td {
+      border: 1px solid #e2e8f0;
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    table.native-table th {
+      background-color: #f8fafc;
+      font-weight: bold;
+      color: #1e293b;
+      white-space: nowrap;
+    }
+    table.native-table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+    table.native-table tbody tr.row-alert {
+      background-color: #fff5f5 !important;
+    }
+    .copy-cell {
+      cursor: pointer;
+      position: relative;
+      border-bottom: 1px dashed #94a3b8;
+      display: inline-block;
+      padding-bottom: 1px;
+    }
+    .copy-cell:hover {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .copy-cell::after {
+      content: "📋";
+      font-size: 10px;
+      margin-left: 4px;
+      opacity: 0.4;
+    }
+
+    /* BADGES & PROGRESS BAR */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      font-size: 11.5px;
+      font-weight: bold;
+      border-radius: 4px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .badge-draft { background: #6c757d; color: #fff; }
+    .badge-pending { background: #ffc107; color: #212529; }
+    .badge-approved { background: #198754; color: #fff; }
+    .badge-danger { background: #dc3545; color: #fff; }
+    .badge-info { background: #0dcaf0; color: #000; }
+
+    .progress-wrap {
+      width: 100%;
+      background-color: #e9ecef;
+      border-radius: 6px;
+      height: 18px;
+      overflow: hidden;
+      position: relative;
+      min-width: 110px;
+    }
+    .progress-bar {
+      height: 100%;
+      background-color: var(--success);
+      transition: width 0.3s;
+    }
+    .progress-bar.over-limit {
+      background-color: var(--danger);
+    }
+    .progress-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #000;
+      text-shadow: 0 0 2px #fff;
+    }
+
+    /* TABS */
+    .sub-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .sub-tab-btn {
+      padding: 8px 16px;
+      border-radius: 5px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13.5px;
+      color: #475569;
+    }
+    .sub-tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* QUICK-TAP BAKER MOBILE INTERFACE */
+    .quick-tap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .product-tap-card {
+      background: #fff;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .product-tap-card.selected {
+      border-color: var(--primary);
+      background-color: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(13,110,253,0.2);
+    }
+    .product-tap-card .p-code {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: bold;
+    }
+    .product-tap-card .p-name {
+      font-size: 14px;
+      font-weight: bold;
+      margin: 5px 0;
+      color: #1e293b;
+    }
+    .product-tap-card .p-unit {
+      font-size: 12px;
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .quick-num-pad {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    .quick-num-btn {
+      flex: 1;
+      min-width: 58px;
+      padding: 12px 8px;
+      font-size: 16px;
+      font-weight: bold;
+      background: #f1f5f9;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .quick-num-btn:active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    .modal-box {
+      background: #fff;
+      width: 100%;
+      max-width: 580px;
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 16px;
+      background: #f8fafc;
+    }
+    .modal-body {
+      padding: 16px 18px;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .form-row {
+      margin-bottom: 12px;
+    }
+    .form-row label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    /* TOAST & LOADING */
+    #toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-left: 4px solid var(--teal);
+      animation: fadeIn 0.2s ease;
+    }
+    .toast.error { border-left-color: var(--danger); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.65);
+      z-index: 2500;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      font-weight: bold;
+      color: var(--sidebar-bg);
+    }
+    .spinner {
+      width: 38px;
+      height: 38px;
+      border: 4px solid #cbd5e1;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESPONSIVE MOBILE */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-wrapper {
+        margin-left: 0;
+        width: 100%;
+        padding: 12px 10px 80px 10px;
+      }
+      .mobile-topbar {
+        display: flex;
+      }
+      .mobile-bottom-nav {
+        display: flex;
+      }
+      .page-title {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- OVERLAY LOADING & TOAST -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">Đang xử lý dữ liệu...</div>
+  </div>
+  <div id="toast-container"></div>
+
+  <!-- ================= 1. MÀN HÌNH ĐĂNG NHẬP ================= -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <h1>AS MART</h1>
+        <p>Hệ thống Quản lý Sản xuất, Tồn Thuế & Kiểm kê Bánh mì</p>
+      </div>
+      <form id="login-form" onsubmit="submitLogin(event)">
+        <div class="form-row">
+          <label>Tên đăng nhập</label>
+          <input type="text" id="login-username" class="form-control" placeholder="Nhập tài khoản (VD: admin)" required>
+        </div>
+        <div class="form-row">
+          <label>Mật khẩu</label>
+          <input type="password" id="login-password" class="form-control" placeholder="Nhập mật khẩu" required>
+        </div>
+        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width:100%; padding:11px; margin-top:8px; font-size:15px;">
+          <i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP HỆ THỐNG
+        </button>
+      </form>
+
+      <div style="margin-top:16px; text-align:center; border-top:1px solid #eee; padding-top:12px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="toggleApiConfigBox()">
+          <i class="fa-solid fa-gear"></i> Cấu hình kết nối API (Apps Script URL)
+        </button>
+        <div id="api-config-box" style="display:none; margin-top:10px; text-align:left;">
+          <label style="font-size:12px; font-weight:bold;">Link Web App Google Apps Script:</label>
+          <input type="text" id="input-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="margin-top:4px;">
+          <button type="button" class="btn btn-success btn-sm" style="margin-top:6px; width:100%;" onclick="saveApiUrl()">Lưu URL Kết nối</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 2. GIAO DIỆN CHÍNH ================= -->
+  <div id="app-container">
+    <!-- Topbar cho Điện thoại -->
+    <div class="mobile-topbar">
+      <button class="btn btn-sm" style="background:transparent; color:#fff; font-size:18px;" onclick="toggleMobileSidebar()">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div style="font-weight:bold; font-size:16px;">AS MART - BÁNH MÌ</div>
+      <span id="mobile-branch-label" class="badge badge-info"></span>
+    </div>
+
+    <!-- SIDEBAR TRÁI CHUẨN AS MART -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">AS MART</div>
+      <div class="sidebar-user">
+        <div class="user-name">
+          <i class="fa-solid fa-circle-user"></i>
+          <span id="ui-user-fullname">Nguyễn Trung Kiên</span>
+        </div>
+        <div>
+          <span class="role-badge" id="ui-user-role">Admin</span>
+          <span class="branch-badge" id="ui-user-branch">ALL</span>
+        </div>
+      </div>
+
+      <ul class="sidebar-menu" id="sidebar-menu-list">
+        <li data-menu="dashboard"><a onclick="switchMenu('dashboard')"><i class="fa-solid fa-gauge-high"></i> Tổng quan (Dashboard)</a></li>
+        <li data-menu="plans"><a onclick="switchMenu('plans')"><i class="fa-solid fa-calendar-check"></i> Kế hoạch (Tồn AMIS)</a></li>
+        <li data-menu="production"><a onclick="switchMenu('production')"><i class="fa-solid fa-bread-slice"></i> Sản xuất (Nhập Daisy)</a></li>
+        <li data-menu="conversions"><a onclick="switchMenu('conversions')"><i class="fa-solid fa-shuffle"></i> Chuyển loại bánh</a></li>
+        <li data-menu="liquidations"><a onclick="switchMenu('liquidations')"><i class="fa-solid fa-tags"></i> Thanh lý cuối ngày</a></li>
+        <li data-menu="wastes"><a onclick="switchMenu('wastes')"><i class="fa-solid fa-trash-can"></i> Hủy hàng (Xuất Daisy)</a></li>
+        <li data-menu="inventory"><a onclick="switchMenu('inventory')"><i class="fa-solid fa-clipboard-check"></i> Kiểm kê & Hao hụt</a></li>
+        <li data-menu="catalog"><a onclick="switchMenu('catalog')"><i class="fa-solid fa-boxes-stacked"></i> Danh mục & BOM</a></li>
+        <li data-menu="users"><a onclick="switchMenu('users')"><i class="fa-solid fa-users-gear"></i> Người dùng & Quyền</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <a class="change-pass" onclick="openChangePassModal()"><i class="fa-solid fa-key"></i> Đổi mật khẩu</a>
+        <a class="logout" onclick="logoutApp()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</a>
+      </div>
+    </aside>
+
+    <!-- KHUNG NỘI DUNG CHÍNH BÊN PHẢI -->
+    <main class="main-wrapper">
+      <div class="breadcrumb">
+        <span class="link" onclick="switchMenu('dashboard')">Trang chủ</span> / <span id="breadcrumb-current">Tổng quan</span>
+      </div>
+
+      <!-- THANH LỌC CHUNG CHO TOÀN HỆ THỐNG -->
+      <div class="card" id="global-filter-card">
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label><i class="fa-solid fa-store"></i> Chi nhánh</label>
+            <select id="global-branch" class="form-select" onchange="reloadCurrentMenu()"></select>
+          </div>
+          <div class="filter-group" id="filter-date-wrap">
+            <label><i class="fa-solid fa-calendar-day"></i> Ngày làm việc</label>
+            <input type="date" id="global-date" class="form-control" onchange="reloadCurrentMenu()">
+          </div>
+          <div class="filter-group" id="filter-month-wrap" style="display:none;">
+            <label><i class="fa-solid fa-calendar"></i> Kỳ tháng (Kiểm kê)</label>
+            <input type="month" id="global-month" class="form-control" onchange="reloadCurrentMenu()">
+          </div>
+          <div class="filter-group">
+            <label><i class="fa-solid fa-magnifying-glass"></i> Tìm nhanh Mã / Tên bánh</label>
+            <input type="text" id="global-search" class="form-control" placeholder="Gõ mã hoặc tên để lọc..." oninput="renderActiveViewTable()">
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-primary" onclick="reloadCurrentMenu()">
+              <i class="fa-solid fa-rotate"></i> Tải dữ liệu
+            </button>
+            <button class="btn btn-success" onclick="exportCurrentMenuExcel()">
+              <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NỘI DUNG ĐỘNG CỦA TỪNG MENU -->
+      <div id="menu-view-container"></div>
+    </main>
+
+    <!-- Thanh điều hướng nhanh dưới đáy cho Điện thoại -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+      <a data-nav="production" onclick="switchMenu('production')"><i class="fa-solid fa-bread-slice"></i><span>Sản xuất</span></a>
+      <a data-nav="plans" onclick="switchMenu('plans')"><i class="fa-solid fa-calendar-check"></i><span>Kế hoạch</span></a>
+      <a data-nav="conversions" onclick="switchMenu('conversions')"><i class="fa-solid fa-shuffle"></i><span>Chuyển loại</span></a>
+      <a data-nav="wastes" onclick="switchMenu('wastes')"><i class="fa-solid fa-trash-can"></i><span>Hủy hàng</span></a>
+      <a data-nav="inventory" onclick="switchMenu('inventory')"><i class="fa-solid fa-clipboard-check"></i><span>Kiểm kê</span></a>
+    </nav>
+  </div>
+
+  <!-- ================= 3. MODAL DÙNG CHUNG ================= -->
+  <div class="modal-backdrop" id="app-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span id="modal-title">Tiêu đề</span>
+        <button class="btn btn-sm btn-outline" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ================= 4. JAVASCRIPT LOGIC ================= -->
+  <script>
+    /**
+     * ========================================================================
+     * CẤU HÌNH LINK WEB APP GOOGLE APPS SCRIPT TẠI ĐÂY
+     * ========================================================================
+     */
+    const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwhz1xmpaZVZWJ0Te95akAOdkScHsKhuiZVzHzdNBFcIwNkaD6tXp_LyhDRQE7WeRPITQ/exec";
+
+    // State toàn cục
+    let STATE = {
+      apiUrl: localStorage.getItem("ASMART_BAKERY_API_URL") || DEFAULT_API_URL,
+      user: JSON.parse(localStorage.getItem("ASMART_BAKERY_USER") || "null"),
+      branches: [],
+      products: [],
+      boms: [],
+      currentMenu: "dashboard",
+      currentData: [],
+      dashboardData: null,
+      usersList: [],
+      // Sub-mode cho các menu có nhiều tab
+      prodViewMode: "quick", // 'quick' (Nhập nhanh) | 'list' (Danh sách mẻ) | 'summary' (Tổng hợp nhập Daisy)
+      invGroupTab: "Thành phẩm", // 'Thành phẩm' | 'NVL' | 'VTTH' | 'report'
+      catalogTab: "products", // 'products' | 'boms'
+      userTab: "users", // 'users' | 'branches'
+      selectedQuickProduct: null,
+      isSubmitting: false
+    };
+
+    const ALL_MENUS = [
+      { id: "dashboard", name: "Tổng quan (Dashboard)" },
+      { id: "plans", name: "Kế hoạch sản xuất" },
+      { id: "production", name: "Nhật ký Sản xuất" },
+      { id: "conversions", name: "Chuyển loại bánh" },
+      { id: "liquidations", name: "Thanh lý cuối ngày" },
+      { id: "wastes", name: "Hủy hàng" },
+      { id: "inventory", name: "Kiểm kê & Hao hụt" },
+      { id: "catalog", name: "Danh mục & Định mức BOM" },
+      { id: "users", name: "Người dùng & Phân quyền" }
+    ];
+
+    // Khởi tạo ngày & tháng hiện tại theo giờ Việt Nam
+    function getTodayISO() {
+      const now = new Date();
+      const offset = now.getTimezoneOffset() * 60000;
+      return new Date(now - offset).toISOString().slice(0, 10);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("global-date").value = getTodayISO();
+      document.getElementById("global-month").value = getTodayISO().slice(0, 7);
+      document.getElementById("input-api-url").value = STATE.apiUrl;
+
+      if (STATE.user) {
+        initLoggedInSession();
+      }
+    });
+
+    // ========================================================================
+    // KẾT NỐI API BACKEND (VƯỢT CORS GITHUB PAGES BẰNG TEXT/PLAIN)
+    // ========================================================================
+    async function callAPI(action, payload = {}, showLoader = true) {
+      if (!STATE.apiUrl || STATE.apiUrl.includes("THAY_LINK_WEB_APP")) {
+        showToast("Vui lòng bấm 'Cấu hình kết nối API' và dán link Web App Google Apps Script!", true);
+        toggleApiConfigBox(true);
+        throw new Error("Chưa cấu hình API URL");
+      }
+
+      if (showLoader) setLoading(true);
+      try {
+        const res = await fetch(STATE.apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action, payload })
+        });
+        const json = await res.json();
+        if (json.status === "error") {
+          showToast(json.message || "Có lỗi xảy ra!", true);
+          throw new Error(json.message);
+        }
+        return json;
+      } catch (err) {
+        if (err.message !== "Chưa cấu hình API URL") {
+          showToast("Lỗi kết nối: " + err.message, true);
+        }
+        throw err;
+      } finally {
+        if (showLoader) setLoading(false);
+      }
+    }
+
+    function toggleApiConfigBox(forceOpen) {
+      const box = document.getElementById("api-config-box");
+      box.style.display = (forceOpen || box.style.display === "none") ? "block" : "none";
+    }
+
+    function saveApiUrl() {
+      const val = document.getElementById("input-api-url").value.trim();
+      if (!val.startsWith("https://script.google.com")) {
+        return showToast("Link Web App không hợp lệ! Phải bắt đầu bằng https://script.google.com...", true);
+      }
+      STATE.apiUrl = val;
+      localStorage.setItem("ASMART_BAKERY_API_URL", val);
+      showToast("Đã lưu cấu hình API thành công!");
+      document.getElementById("api-config-box").style.display = "none";
+    }
+
+    // ========================================================================
+    // ĐĂNG NHẬP, PHÂN QUYỀN & KHỞI TẠO PHIÊN LÀM VIỆC
+    // ========================================================================
+    async function submitLogin(e) {
+      e.preventDefault();
+      if (STATE.isSubmitting) return;
+      STATE.isSubmitting = true;
+      try {
+        const username = document.getElementById("login-username").value.trim();
+        const password = document.getElementById("login-password").value.trim();
+        const res = await callAPI("login", { username, password });
+
+        STATE.user = res.user;
+        STATE.branches = res.branches || [];
+        STATE.products = res.products || [];
+        STATE.boms = res.boms || [];
+        localStorage.setItem("ASMART_BAKERY_USER", JSON.stringify(STATE.user));
+
+        showToast("Xin chào " + STATE.user.Ho_Ten + "!");
+        initLoggedInSession();
+      } catch (err) {
+        // Đã báo toast trong callAPI
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    async function initLoggedInSession() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app-container").style.display = "block";
+
+      // Hiển thị thông tin User trên Sidebar
+      document.getElementById("ui-user-fullname").textContent = STATE.user.Ho_Ten;
+      document.getElementById("ui-user-role").textContent = STATE.user.Vai_Tro;
+      document.getElementById("ui-user-branch").textContent = STATE.user.Chi_Nhanh_Phu_Trach;
+      document.getElementById("mobile-branch-label").textContent = STATE.user.Chi_Nhanh_Phu_Trach;
+
+      // Nếu refresh trang thì tải lại danh mục mới nhất
+      if (STATE.products.length === 0) {
+        try {
+          const initRes = await callAPI("getInitialData", {});
+          STATE.branches = initRes.branches || [];
+          STATE.products = initRes.products || [];
+          STATE.boms = initRes.boms || [];
+        } catch (e) {}
+      }
+
+      setupBranchDropdown();
+      applyMenuPermissions();
+
+      // Mặc định: Nhân viên sản xuất vào thẳng màn hình Nhập nhanh Sản xuất; vị trí khác vào Dashboard
+      if (STATE.user.Vai_Tro === "Nhân viên sản xuất") {
+        STATE.prodViewMode = "quick";
+        switchMenu("production");
+      } else {
+        STATE.prodViewMode = window.innerWidth < 768 ? "quick" : "list";
+        const firstAllowed = getAllowedMenus()[0] || "production";
+        switchMenu(firstAllowed);
+      }
+    }
+
+    function getAllowedMenus() {
+      if (!STATE.user) return [];
+      if (STATE.user.Vai_Tro === "Admin" || STATE.user.Menu_Quyen === "ALL") {
+        return ALL_MENUS.map(m => m.id);
+      }
+      return String(STATE.user.Menu_Quyen || "").split(",").map(s => s.trim()).filter(Boolean);
+    }
+
+    function applyMenuPermissions() {
+      const allowed = getAllowedMenus();
+      document.querySelectorAll("#sidebar-menu-list li").forEach(li => {
+        const menuId = li.getAttribute("data-menu");
+        li.style.display = allowed.includes(menuId) ? "block" : "none";
+      });
+      document.querySelectorAll("#mobile-bottom-nav a").forEach(a => {
+        const navId = a.getAttribute("data-nav");
+        a.style.display = allowed.includes(navId) ? "flex" : "none";
+      });
+    }
+
+    function setupBranchDropdown() {
+      const sel = document.getElementById("global-branch");
+      sel.innerHTML = "";
+      const userBranch = String(STATE.user.Chi_Nhanh_Phu_Trach || "ALL").trim();
+
+      if (userBranch === "ALL") {
+        sel.innerHTML += `<option value="ALL">-- Tất cả chi nhánh --</option>`;
+        STATE.branches.forEach(b => {
+          sel.innerHTML += `<option value="${b.Ten_CN}">${b.Ten_CN}</option>`;
+        });
+      } else {
+        const allowedBranches = userBranch.split(",").map(s => s.trim());
+        allowedBranches.forEach(bName => {
+          sel.innerHTML += `<option value="${bName}">${bName}</option>`;
+        });
+      }
+    }
+
+    function logoutApp() {
+      localStorage.removeItem("ASMART_BAKERY_USER");
+      STATE.user = null;
+      location.reload();
+    }
+
+    function isAdminOrAccountant() {
+      return ["Admin", "Kế toán", "Giám đốc siêu thị"].includes(STATE.user.Vai_Tro);
+    }
+
+    function canInputDataEntry() {
+      return ["Admin", "Kế toán", "Nhập liệu"].includes(STATE.user.Vai_Tro);
+    }
+
+    // ========================================================================
+    // ĐIỀU HƯỚNG MENU CHÍNH
+    // ========================================================================
+    function switchMenu(menuId) {
+      const allowed = getAllowedMenus();
+      if (!allowed.includes(menuId)) {
+        return showToast("Bạn không có quyền truy cập menu này!", true);
+      }
+
+      STATE.currentMenu = menuId;
+      document.getElementById("sidebar").classList.remove("open");
+
+      // Active state trên Sidebar & Bottom Nav
+      document.querySelectorAll("#sidebar-menu-list li a").forEach(a => a.classList.remove("active"));
+      const activeLi = document.querySelector(`#sidebar-menu-list li[data-menu="${menuId}"] a`);
+      if (activeLi) activeLi.classList.add("active");
+
+      document.querySelectorAll("#mobile-bottom-nav a").forEach(a => a.classList.remove("active"));
+      const activeMobile = document.querySelector(`#mobile-bottom-nav a[data-nav="${menuId}"]`);
+      if (activeMobile) activeMobile.classList.add("active");
+
+      const menuObj = ALL_MENUS.find(m => m.id === menuId);
+      document.getElementById("breadcrumb-current").textContent = menuObj ? menuObj.name : menuId;
+
+      // Ẩn/hiện bộ lọc Ngày hoặc Tháng tùy theo menu
+      const filterCard = document.getElementById("global-filter-card");
+      const dateWrap = document.getElementById("filter-date-wrap");
+      const monthWrap = document.getElementById("filter-month-wrap");
+
+      if (menuId === "catalog" || menuId === "users") {
+        filterCard.style.display = "none";
+      } else {
+        filterCard.style.display = "block";
+        if (menuId === "inventory") {
+          dateWrap.style.display = "none";
+          monthWrap.style.display = "block";
+        } else {
+          dateWrap.style.display = "block";
+          monthWrap.style.display = "none";
+        }
+      }
+
+      reloadCurrentMenu();
+    }
+
+    async function reloadCurrentMenu() {
+      const branch = document.getElementById("global-branch").value;
+      const date = document.getElementById("global-date").value;
+      const month = document.getElementById("global-month").value;
+      const m = STATE.currentMenu;
+
+      try {
+        if (m === "dashboard") {
+          const res = await callAPI("getDashboard", { branch, date });
+          STATE.dashboardData = res;
+          STATE.currentData = res.productSummary || [];
+        } else if (m === "plans") {
+          const res = await callAPI("getPlans", { branch, date });
+          STATE.currentData = res.data || [];
+        } else if (m === "production") {
+          const res = await callAPI("getProduction", { branch, date });
+          STATE.currentData = res.data || [];
+        } else if (m === "conversions") {
+          const res = await callAPI("getConversions", { branch, date });
+          STATE.currentData = res.data || [];
+        } else if (m === "liquidations") {
+          const res = await callAPI("getLiquidations", { branch, date });
+          STATE.currentData = res.data || [];
+        } else if (m === "wastes") {
+          const res = await callAPI("getWastes", { branch, date });
+          STATE.currentData = res.data || [];
+        } else if (m === "inventory") {
+          const res = await callAPI("getInventory", { branch, kyKiemKe: month });
+          STATE.currentData = res.data || [];
+        } else if (m === "catalog") {
+          const res = await callAPI("getCatalog", {});
+          STATE.products = res.products || [];
+          STATE.boms = res.boms || [];
+        } else if (m === "users") {
+          const res = await callAPI("getUsers", {});
+          STATE.usersList = res.data || [];
+        }
+
+        renderActiveViewTable();
+      } catch (e) {}
+    }
+
+    function renderActiveViewTable() {
+      const m = STATE.currentMenu;
+      if (m === "dashboard") renderDashboardView();
+      else if (m === "plans") renderPlansView();
+      else if (m === "production") renderProductionView();
+      else if (m === "conversions") renderConversionsView();
+      else if (m === "liquidations") renderLiquidationsView();
+      else if (m === "wastes") renderWastesView();
+      else if (m === "inventory") renderInventoryView();
+      else if (m === "catalog") renderCatalogView();
+      else if (m === "users") renderUsersView();
+    }
+
+    function filterBySearchKeyword(list, fields) {
+      const kw = (document.getElementById("global-search").value || "").trim().toLowerCase();
+      if (!kw) return list;
+      return list.filter(item => fields.some(f => String(item[f] || "").toLowerCase().includes(kw)));
+    }
+
+    // ========================================================================
+    // VIEW 1: DASHBOARD TỔNG QUAN & CẢNH BÁO VƯỢT TRẦN TỒN THUẾ AMIS
+    // ========================================================================
+    function renderDashboardView() {
+      const container = document.getElementById("menu-view-container");
+      const d = STATE.dashboardData || { kpi: {}, productSummary: [], alerts: [] };
+      const kpi = d.kpi || {};
+      const rows = filterBySearchKeyword(d.productSummary || [], ["Ma_Thanh_Pham", "Ten_Thanh_Pham", "Ma_AMIS", "Ma_Daisy"]);
+
+      let alertBanner = "";
+      if (d.alerts && d.alerts.length > 0) {
+        alertBanner = `
+          <div class="card" style="background:#fff5f5; border-left:5px solid var(--danger);">
+            <div style="font-weight:bold; color:var(--danger); margin-bottom:6px;">
+              <i class="fa-solid fa-triangle-exclamation"></i> CẢNH BÁO VƯỢT TRẦN TỒN THUẾ AMIS (${d.alerts.length} mã bánh cần đẩy bổ sung Lệnh SX ngay!)
+            </div>
+            <div style="font-size:13px;">
+              ${d.alerts.map(a => `<span class="badge badge-danger" style="margin-right:6px; margin-bottom:4px;">[${a.Ma_CN}] ${a.Ten_Thanh_Pham}: Thực tế ${a.SL_Thuc_Te_SX} / KH ${a.Tong_KH_AMIS} (Cần đẩy thêm +${a.Vuot_Tran_AMIS})</span>`).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-gauge-high"></i> Tổng quan Sản xuất & Tồn kho Thuế trong ngày</div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="switchMenu('plans')"><i class="fa-solid fa-calendar-check"></i> Đi tới Kế hoạch AMIS</button>
+            <button class="btn btn-success" onclick="switchMenu('production')"><i class="fa-solid fa-bread-slice"></i> Đi tới Sản xuất Daisy</button>
+          </div>
+        </div>
+
+        ${alertBanner}
+
+        <div class="kpi-grid">
+          <div class="kpi-card" style="border-left-color:var(--primary);">
+            <div class="kpi-title">Tổng Kế hoạch (Tồn AMIS)</div>
+            <div class="kpi-value">${formatNumber(kpi.totalPlanQty || 0)}</div>
+            <div class="kpi-sub">Chờ đẩy AMIS: <b>${kpi.pendingAMISCount || 0}</b> dòng</div>
+          </div>
+          <div class="kpi-card" style="border-left-color:var(--success);">
+            <div class="kpi-title">Thực tế ra lò (Daisy)</div>
+            <div class="kpi-value">${formatNumber(kpi.totalProdQty || 0)}</div>
+            <div class="kpi-sub">Chờ nhập Daisy: <b>${kpi.pendingDaisyProdCount || 0}</b> mẻ</div>
+          </div>
+          <div class="kpi-card" style="border-left-color:var(--info);">
+            <div class="kpi-title">Chuyển loại / Thanh lý</div>
+            <div class="kpi-value">${formatNumber(kpi.totalConvQty || 0)} / ${formatNumber(kpi.totalLiqQty || 0)}</div>
+            <div class="kpi-sub">Theo dõi luân chuyển bánh</div>
+          </div>
+          <div class="kpi-card" style="border-left-color:var(--danger);">
+            <div class="kpi-title">Tổng bánh hủy trong ngày</div>
+            <div class="kpi-value">${formatNumber(kpi.totalWasteQty || 0)}</div>
+            <div class="kpi-sub">Chờ xuất hủy Daisy: <b>${kpi.pendingDaisyWasteCount || 0}</b> dòng</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:bold; margin-bottom:10px; font-size:15px;">
+            Bảng Đối chiếu Kế hoạch Tồn Thuế AMIS vs Thực tế Sản xuất (Bấm vào Mã/Tên/SL để Copy nhanh)
+          </div>
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Chi nhánh</th>
+                  <th>Mã AMIS</th>
+                  <th>Mã Daisy</th>
+                  <th>Tên thành phẩm</th>
+                  <th>ĐVT</th>
+                  <th>Tổng KH (Tồn AMIS)</th>
+                  <th>Thực tế SX (Daisy)</th>
+                  <th>Chuyển loại</th>
+                  <th>Thanh lý</th>
+                  <th>Hủy</th>
+                  <th>Cảnh báo Tồn Thuế</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="12" style="text-align:center; padding:20px;">Chưa có dữ liệu phát sinh trong ngày.</td></tr>` :
+                  rows.map((r, idx) => `
+                    <tr class="${r.Vuot_Tran_AMIS > 0 ? 'row-alert' : ''}">
+                      <td>${idx + 1}</td>
+                      <td><b>${r.Ma_CN}</b></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ma_AMIS}')">${r.Ma_AMIS}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ma_Daisy}')">${r.Ma_Daisy || '-'}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ten_Thanh_Pham}')"><b>${r.Ten_Thanh_Pham}</b></span></td>
+                      <td>${r.DVT}</td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Tong_KH_AMIS}')"><b>${r.Tong_KH_AMIS}</b></span></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.SL_Thuc_Te_SX}')"><b style="color:var(--primary);">${r.SL_Thuc_Te_SX}</b></span></td>
+                      <td>${r.SL_Chuyen_Loai || 0}</td>
+                      <td>${r.SL_Thanh_Ly || 0}</td>
+                      <td>${r.SL_Huy || 0}</td>
+                      <td>
+                        ${r.Vuot_Tran_AMIS > 0
+                          ? `<span class="badge badge-danger">${r.Canh_Bao}</span>`
+                          : `<span class="badge badge-approved">${r.Canh_Bao}</span>`}
+                      </td>
+                    </tr>
+                  `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // ========================================================================
+    // VIEW 2: KẾ HOẠCH SẢN XUẤT ĐẦU NGÀY (ĐẢM BẢO TỒN KHO THUẾ AMIS)
+    // ========================================================================
+    function renderPlansView() {
+      const container = document.getElementById("menu-view-container");
+      const rows = filterBySearchKeyword(STATE.currentData, ["Ma_Thanh_Pham", "Ten_Thanh_Pham", "Ma_AMIS"]);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-calendar-check"></i> Kế hoạch Sản xuất (Đẩy Lệnh SX AMIS Thuế đầu ngày)</div>
+          <div class="header-actions">
+            <button class="btn btn-warning" onclick="copyPlanYesterday()">
+              <i class="fa-solid fa-copy"></i> Sao chép từ hôm qua
+            </button>
+            <button class="btn btn-primary" onclick="openPlanModal()">
+              <i class="fa-solid fa-circle-plus"></i> + Thêm Kế hoạch bánh
+            </button>
+            ${canInputDataEntry() ? `
+              <button class="btn btn-success" onclick="batchConfirmAMIS()">
+                <i class="fa-solid fa-check-double"></i> Xác nhận Đã đẩy AMIS
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="margin-bottom:8px; font-size:12.5px; color:var(--text-muted);">
+            💡 <b>Mẹo cho Nhập liệu:</b> Bấm thẳng vào <b>Mã AMIS</b> hoặc <b>Tổng KH</b> để copy nhanh vào phần mềm AMIS Thuế. Sau khi nhập xong, tích chọn và bấm <b>"Xác nhận Đã đẩy AMIS"</b> để khóa sổ.
+          </div>
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" onchange="toggleSelectAll(this, 'plan-chk')"></th>
+                  <th>STT</th>
+                  <th>Chi nhánh</th>
+                  <th>Mã AMIS</th>
+                  <th>Tên thành phẩm</th>
+                  <th>ĐVT</th>
+                  <th>KH Đầu ngày</th>
+                  <th>Bổ sung</th>
+                  <th>Tổng KH (AMIS)</th>
+                  <th>Tiến độ Thực tế / KH</th>
+                  <th>Trạng thái AMIS</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="12" style="text-align:center; padding:20px;">Chưa có kế hoạch sản xuất cho ngày này. Hãy bấm "Sao chép từ hôm qua" hoặc "+ Thêm Kế hoạch bánh".</td></tr>` :
+                  rows.map((r, i) => {
+                    const pct = Math.min(100, Number(r.Ti_Le_Hoan_Thanh || 0));
+                    const isOver = Number(r.SL_Thuc_Te) > Number(r.Tong_KH);
+                    const isLocked = Number(r.Khoa_So) === 1;
+                    return `
+                      <tr class="${isOver ? 'row-alert' : ''}">
+                        <td><input type="checkbox" class="plan-chk" value="${r.Plan_ID}"></td>
+                        <td>${i + 1}</td>
+                        <td>${r.Ma_CN}</td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_AMIS}')"><b>${r.Ma_AMIS}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ten_Thanh_Pham}')"><b>${r.Ten_Thanh_Pham}</b></span></td>
+                        <td>${r.DVT}</td>
+                        <td>${r.SL_Ke_Hoach}</td>
+                        <td>${r.SL_Bo_Sung || 0}</td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Tong_KH}')"><b style="font-size:15px; color:var(--primary);">${r.Tong_KH}</b></span></td>
+                        <td>
+                          <div class="progress-wrap">
+                            <div class="progress-bar ${isOver ? 'over-limit' : ''}" style="width:${pct}%"></div>
+                            <div class="progress-text">${r.SL_Thuc_Te} / ${r.Tong_KH} (${r.Ti_Le_Hoan_Thanh}%)</div>
+                          </div>
+                          ${isOver ? `<div style="color:var(--danger); font-size:11px; font-weight:bold; margin-top:2px;">⚠️ Vượt KH +${r.Can_Bo_Sung_AMIS} (Cần bổ sung tồn AMIS)</div>` : ''}
+                        </td>
+                        <td>
+                          <span class="badge ${r.Trang_Thai_AMIS === 'Đã đẩy AMIS' ? 'badge-approved' : 'badge-pending'}">${r.Trang_Thai_AMIS}</span>
+                          ${isLocked ? `<i class="fa-solid fa-lock" title="Đã khóa dữ liệu" style="color:#6c757d; margin-left:4px;"></i>` : ''}
+                        </td>
+                        <td>
+                          <button class="btn btn-sm btn-primary" title="Sửa / Bổ sung" onclick='openPlanModal(${JSON.stringify(r)})'><i class="fa-solid fa-pen-to-square"></i></button>
+                          ${isAdminOrAccountant() ? `
+                            <button class="btn btn-sm btn-warning" title="Khóa / Mở khóa" onclick="toggleLock('PLANS','Plan_ID','${r.Plan_ID}', ${isLocked ? 0 : 1})">
+                              <i class="fa-solid ${isLocked ? 'fa-lock-open' : 'fa-lock'}"></i>
+                            </button>
+                          ` : ''}
+                          ${(!isLocked || isAdminOrAccountant()) ? `
+                            <button class="btn btn-sm btn-danger" title="Xóa" onclick="deleteRow('PLANS','Plan_ID','${r.Plan_ID}')"><i class="fa-solid fa-trash"></i></button>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openPlanModal(editItem = null) {
+      const branch = editItem ? editItem.Ma_CN : getSelectedSingleBranch();
+      if (!branch) return;
+
+      const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
+      const optionsHtml = tpList.map(p =>
+        `<option value="${p.Ma_SP}" ${editItem && editItem.Ma_Thanh_Pham === p.Ma_SP ? 'selected' : ''}>${p.Ma_SP} - ${p.Ten_SP} (${p.Don_Vi_Tinh})</option>`
+      ).join("");
+
+      showModal(
+        editItem ? "Cập nhật / Bổ sung Kế hoạch Sản xuất" : "Thêm Kế hoạch Sản xuất Đầu ngày",
+        `
+          <div class="form-row">
+            <label>Chi nhánh</label>
+            <input type="text" id="m-plan-branch" class="form-control" value="${branch}" readonly>
+          </div>
+          <div class="form-row">
+            <label>Ngày kế hoạch</label>
+            <input type="date" id="m-plan-date" class="form-control" value="${editItem ? editItem.Ngay_KH : document.getElementById('global-date').value}">
+          </div>
+          <div class="form-row">
+            <label>Chọn Thành phẩm bánh mì</label>
+            <select id="m-plan-product" class="form-select" ${editItem ? 'disabled' : ''}>${optionsHtml}</select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng Kế hoạch đầu ngày</label>
+            <input type="number" id="m-plan-qty" class="form-control" value="${editItem ? editItem.SL_Ke_Hoach : ''}" placeholder="VD: 100" min="0">
+          </div>
+          <div class="form-row">
+            <label>Số lượng Bổ sung thêm trong ngày (nếu vượt trần tồn thuế)</label>
+            <input type="number" id="m-plan-extra" class="form-control" value="${editItem ? (editItem.SL_Bo_Sung || 0) : 0}" min="0">
+          </div>
+          <div class="form-row">
+            <label>Ghi chú</label>
+            <input type="text" id="m-plan-note" class="form-control" value="${editItem ? (editItem.Ghi_Chu || '') : ''}">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="savePlanSubmit('${editItem ? editItem.Plan_ID : ''}')"><i class="fa-solid fa-floppy-disk"></i> Lưu Kế hoạch</button>`
+      );
+    }
+
+    async function savePlanSubmit(planId) {
+      if (STATE.isSubmitting) return;
+      const maSP = document.getElementById("m-plan-product").value;
+      const prod = STATE.products.find(p => p.Ma_SP === maSP) || {};
+      const slKH = Number(document.getElementById("m-plan-qty").value || 0);
+      const slBS = Number(document.getElementById("m-plan-extra").value || 0);
+
+      if (slKH + slBS <= 0) return showToast("Vui lòng nhập số lượng lớn hơn 0!", true);
+
+      STATE.isSubmitting = true;
+      try {
+        await callAPI("savePlan", {
+          Plan_ID: planId || undefined,
+          Ngay_KH: document.getElementById("m-plan-date").value,
+          Ma_CN: document.getElementById("m-plan-branch").value,
+          Ma_Thanh_Pham: maSP,
+          Ten_Thanh_Pham: prod.Ten_SP || "",
+          DVT: prod.Don_Vi_Tinh || "Cái",
+          SL_Ke_Hoach: slKH,
+          SL_Bo_Sung: slBS,
+          Nguoi_Lap: STATE.user.Ho_Ten,
+          Ghi_Chu: document.getElementById("m-plan-note").value,
+          forceOverride: true
+        });
+        closeModal();
+        showToast("Đã lưu Kế hoạch sản xuất!");
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    async function copyPlanYesterday() {
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+      const targetDate = document.getElementById("global-date").value;
+      const res = await callAPI("copyPlanFromYesterday", {
+        targetDate,
+        branch,
+        user: STATE.user.Ho_Ten
+      });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    async function batchConfirmAMIS() {
+      const ids = getCheckedIds("plan-chk");
+      if (ids.length === 0) return showToast("Vui lòng tích chọn ít nhất 1 dòng kế hoạch!", true);
+      const res = await callAPI("updatePlanStatusAMIS", {
+        ids,
+        status: "Đã đẩy AMIS",
+        user: STATE.user.Ho_Ten
+      });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 3: SẢN XUẤT THỰC TẾ (CHẾ ĐỘ QUICK-TAP CHO THỢ BÁNH & BẢNG NHẬP DAISY)
+    // ========================================================================
+    function renderProductionView() {
+      const container = document.getElementById("menu-view-container");
+      const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
+      const rows = filterBySearchKeyword(STATE.currentData, ["Ma_Thanh_Pham", "Ten_Thanh_Pham", "Ma_Daisy", "So_Me"]);
+
+      // Nếu chưa chọn món bánh mặc định trong Quick-Tap thì chọn món đầu tiên
+      if (!STATE.selectedQuickProduct && tpList.length > 0) {
+        STATE.selectedQuickProduct = tpList[0].Ma_SP;
+      }
+
+      // Tính bảng tổng hợp cộng dồn theo mã bánh để Nhập liệu nhập vào Daisy cuối ngày
+      const summaryByCode = {};
+      rows.forEach(r => {
+        if (!summaryByCode[r.Ma_Thanh_Pham]) {
+          summaryByCode[r.Ma_Thanh_Pham] = {
+            Ma_CN: r.Ma_CN,
+            Ma_Daisy: r.Ma_Daisy,
+            Ma_Thanh_Pham: r.Ma_Thanh_Pham,
+            Ten_Thanh_Pham: r.Ten_Thanh_Pham,
+            DVT: r.DVT,
+            So_Me_Count: 0,
+            Tong_SL_SX: 0,
+            Batch_IDs: [],
+            All_Synced: true
+          };
+        }
+        summaryByCode[r.Ma_Thanh_Pham].So_Me_Count++;
+        summaryByCode[r.Ma_Thanh_Pham].Tong_SL_SX += Number(r.SL_San_Xuat || 0);
+        summaryByCode[r.Ma_Thanh_Pham].Batch_IDs.push(r.Prod_ID);
+        if (r.Trang_Thai_Daisy !== "Đã nhập Daisy") {
+          summaryByCode[r.Ma_Thanh_Pham].All_Synced = false;
+        }
+      });
+      const summaryList = Object.values(summaryByCode);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-bread-slice"></i> Nhật ký Sản xuất thực tế & Đồng bộ Daisy</div>
+          <div class="header-actions">
+            ${canInputDataEntry() ? `
+              <button class="btn btn-success" onclick="batchConfirmDaisyProd()">
+                <i class="fa-solid fa-check-double"></i> Xác nhận Đã nhập Daisy
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn ${STATE.prodViewMode === 'quick' ? 'active' : ''}" onclick="STATE.prodViewMode='quick'; renderProductionView();">
+            <i class="fa-solid fa-mobile-screen-button"></i> 1. Nhập nhanh tại lò (Điện thoại)
+          </button>
+          <button class="sub-tab-btn ${STATE.prodViewMode === 'summary' ? 'active' : ''}" onclick="STATE.prodViewMode='summary'; renderProductionView();">
+            <i class="fa-solid fa-layer-group"></i> 2. Tổng hợp theo Mã để nhập Daisy (${summaryList.length} mã)
+          </button>
+          <button class="sub-tab-btn ${STATE.prodViewMode === 'list' ? 'active' : ''}" onclick="STATE.prodViewMode='list'; renderProductionView();">
+            <i class="fa-solid fa-list-check"></i> 3. Chi tiết từng mẻ bánh (${rows.length} mẻ)
+          </button>
+        </div>
+
+        ${STATE.prodViewMode === 'quick' ? `
+          <!-- CHẾ ĐỘ QUICK-TAP CHO THỢ BÁNH -->
+          <div class="card" style="border:2px solid var(--primary);">
+            <div style="font-weight:bold; font-size:15px; margin-bottom:10px; color:var(--primary);">
+              <i class="fa-solid fa-hand-pointer"></i> BƯỚC 1: Chạm chọn loại bánh vừa ra lò
+            </div>
+            <div class="quick-tap-grid">
+              ${tpList.map(p => `
+                <div class="product-tap-card ${STATE.selectedQuickProduct === p.Ma_SP ? 'selected' : ''}"
+                     onclick="STATE.selectedQuickProduct='${p.Ma_SP}'; renderProductionView();">
+                  <div class="p-code">${p.Ma_Daisy || p.Ma_SP}</div>
+                  <div class="p-name">${p.Ten_SP}</div>
+                  <div class="p-unit">ĐVT: ${p.Don_Vi_Tinh}</div>
+                </div>
+              `).join("")}
+            </div>
+
+            <div style="font-weight:bold; font-size:15px; margin-bottom:8px; color:var(--primary);">
+              <i class="fa-solid fa-calculator"></i> BƯỚC 2: Nhập số lượng hoàn thành của mẻ này
+            </div>
+            <div class="quick-num-pad">
+              <button type="button" class="quick-num-btn" onclick="addQuickQty(5)">+5</button>
+              <button type="button" class="quick-num-btn" onclick="addQuickQty(10)">+10</button>
+              <button type="button" class="quick-num-btn" onclick="addQuickQty(20)">+20</button>
+              <button type="button" class="quick-num-btn" onclick="addQuickQty(30)">+30</button>
+              <button type="button" class="quick-num-btn" onclick="addQuickQty(50)">+50</button>
+              <button type="button" class="quick-num-btn" style="background:#fee2e2; color:#b91c1c;" onclick="document.getElementById('quick-prod-qty').value=''">Xóa</button>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <input type="number" id="quick-prod-qty" class="form-control" placeholder="Nhập số lượng bánh..." style="font-size:20px; font-weight:bold; height:50px; flex:1; min-width:180px;" min="1">
+              <input type="text" id="quick-prod-note" class="form-control" placeholder="Ghi chú mẻ bánh (nếu có)..." style="height:50px; flex:1; min-width:180px;">
+              <button type="button" id="btn-quick-save-prod" class="btn btn-success" style="height:50px; font-size:16px; padding:0 24px; width:100%; max-width:280px;" onclick="submitQuickProduction()">
+                <i class="fa-solid fa-paper-plane"></i> LƯU MẺ BÁNH NGAY
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
+        ${STATE.prodViewMode === 'summary' ? `
+          <!-- BẢNG TỔNG HỢP CỘNG DỒN THEO MÃ BÁNH CHO NHẬP LIỆU DAISY -->
+          <div class="card">
+            <div style="margin-bottom:8px; font-size:13px; color:var(--text-muted);">
+              📋 <b>Bảng tổng hợp cuối ngày cho Nhập liệu Daisy:</b> Hệ thống đã cộng dồn tất cả các mẻ trong ngày theo từng mã bánh. Bạn chỉ cần bấm vào <b>Mã Daisy</b> và <b>Tổng SL Sản xuất</b> để copy dán sang Daisy!
+            </div>
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Chi nhánh</th>
+                    <th>Mã Daisy</th>
+                    <th>Mã Nội bộ</th>
+                    <th>Tên thành phẩm</th>
+                    <th>ĐVT</th>
+                    <th>Số mẻ trong ngày</th>
+                    <th>Tổng SL Sản xuất (Copy nhập Daisy)</th>
+                    <th>Trạng thái Daisy</th>
+                    <th>Thao tác nhanh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryList.length === 0 ? `<tr><td colspan="10" style="text-align:center; padding:20px;">Chưa có mẻ bánh nào trong ngày.</td></tr>` :
+                    summaryList.map((s, idx) => `
+                      <tr>
+                        <td>${idx + 1}</td>
+                        <td>${s.Ma_CN}</td>
+                        <td><span class="copy-cell" onclick="copyText('${s.Ma_Daisy}')"><b>${s.Ma_Daisy}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${s.Ma_Thanh_Pham}')">${s.Ma_Thanh_Pham}</span></td>
+                        <td><span class="copy-cell" onclick="copyText('${s.Ten_Thanh_Pham}')"><b>${s.Ten_Thanh_Pham}</b></span></td>
+                        <td>${s.DVT}</td>
+                        <td>${s.So_Me_Count} mẻ</td>
+                        <td><span class="copy-cell" onclick="copyText('${s.Tong_SL_SX}')"><b style="font-size:16px; color:var(--success);">${s.Tong_SL_SX}</b></span></td>
+                        <td>
+                          <span class="badge ${s.All_Synced ? 'badge-approved' : 'badge-pending'}">
+                            ${s.All_Synced ? 'Đã nhập Daisy' : 'Chờ nhập Daisy'}
+                          </span>
+                        </td>
+                        <td>
+                          ${canInputDataEntry() && !s.All_Synced ? `
+                            <button class="btn btn-sm btn-success" onclick='confirmDaisyByIds(${JSON.stringify(s.Batch_IDs)})'>
+                              <i class="fa-solid fa-check"></i> Đã nhập mã này
+                            </button>
+                          ` : '-'}
+                        </td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- BẢNG CHI TIẾT TỪNG MẺ BÁNH RA LÒ -->
+        <div class="card">
+          <div style="font-weight:bold; margin-bottom:10px;">Nhật ký các mẻ bánh đã ra lò trong ngày (${rows.length} mẻ)</div>
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" onchange="toggleSelectAll(this, 'prod-chk')"></th>
+                  <th>Giờ ra lò</th>
+                  <th>Chi nhánh</th>
+                  <th>Số mẻ</th>
+                  <th>Mã Daisy</th>
+                  <th>Tên thành phẩm</th>
+                  <th>SL Hoàn thành</th>
+                  <th>Người SX</th>
+                  <th>Trạng thái Daisy</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="10" style="text-align:center; padding:18px;">Chưa có mẻ bánh nào được nhập hôm nay.</td></tr>` :
+                  rows.map(r => {
+                    const isLocked = Number(r.Khoa_So) === 1;
+                    return `
+                      <tr>
+                        <td><input type="checkbox" class="prod-chk" value="${r.Prod_ID}"></td>
+                        <td>${r.Gio_SX}</td>
+                        <td>${r.Ma_CN}</td>
+                        <td><b>${r.So_Me}</b></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_Daisy}')">${r.Ma_Daisy}</span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ten_Thanh_Pham}')"><b>${r.Ten_Thanh_Pham}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.SL_San_Xuat}')"><b style="color:var(--primary); font-size:15px;">${r.SL_San_Xuat}</b></span> ${r.DVT}</td>
+                        <td>${r.Nguoi_SX}</td>
+                        <td>
+                          <span class="badge ${r.Trang_Thai_Daisy === 'Đã nhập Daisy' ? 'badge-approved' : 'badge-pending'}">${r.Trang_Thai_Daisy}</span>
+                          ${isLocked ? `<i class="fa-solid fa-lock" style="color:#6c757d; margin-left:4px;"></i>` : ''}
+                        </td>
+                        <td>
+                          ${isAdminOrAccountant() ? `
+                            <button class="btn btn-sm btn-warning" onclick="toggleLock('PRODUCTION','Prod_ID','${r.Prod_ID}', ${isLocked ? 0 : 1})">
+                              <i class="fa-solid ${isLocked ? 'fa-lock-open' : 'fa-lock'}"></i>
+                            </button>
+                          ` : ''}
+                          ${(!isLocked || isAdminOrAccountant()) ? `
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow('PRODUCTION','Prod_ID','${r.Prod_ID}')"><i class="fa-solid fa-trash"></i></button>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function addQuickQty(amount) {
+      const inp = document.getElementById("quick-prod-qty");
+      inp.value = Number(inp.value || 0) + Number(amount);
+    }
+
+    // Chống bấm đúp tuyệt đối cho Thợ bánh
+    async function submitQuickProduction() {
+      if (STATE.isSubmitting) return;
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+
+      const qty = Number(document.getElementById("quick-prod-qty").value || 0);
+      if (qty <= 0) return showToast("Vui lòng nhập số lượng mẻ bánh lớn hơn 0!", true);
+
+      const prod = STATE.products.find(p => p.Ma_SP === STATE.selectedQuickProduct);
+      if (!prod) return showToast("Vui lòng chạm chọn 1 loại bánh!", true);
+
+      const btn = document.getElementById("btn-quick-save-prod");
+      STATE.isSubmitting = true;
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await callAPI("saveProduction", {
+          Ngay_SX: document.getElementById("global-date").value,
+          Ma_CN: branch,
+          Ma_Thanh_Pham: prod.Ma_SP,
+          Ten_Thanh_Pham: prod.Ten_SP,
+          DVT: prod.Don_Vi_Tinh,
+          SL_San_Xuat: qty,
+          Nguoi_SX: STATE.user.Ho_Ten,
+          Ghi_Chu: document.getElementById("quick-prod-note").value
+        });
+        document.getElementById("quick-prod-qty").value = "";
+        document.getElementById("quick-prod-note").value = "";
+        showToast(res.message);
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function batchConfirmDaisyProd() {
+      const ids = getCheckedIds("prod-chk");
+      if (ids.length === 0) return showToast("Vui lòng tích chọn các mẻ bánh đã nhập vào Daisy!", true);
+      await confirmDaisyByIds(ids);
+    }
+
+    async function confirmDaisyByIds(ids) {
+      const res = await callAPI("updateProdStatusDaisy", {
+        ids,
+        status: "Đã nhập Daisy",
+        user: STATE.user.Ho_Ten
+      });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 4: NGHIỆP VỤ CHUYỂN LOẠI (BÁNH A -> BÁNH B, KHÔNG CẦN QUẢN LÝ DUYỆT)
+    // ========================================================================
+    function renderConversionsView() {
+      const container = document.getElementById("menu-view-container");
+      const rows = filterBySearchKeyword(STATE.currentData, ["Ma_Banh_Goc", "Ten_Banh_Goc", "Ma_Banh_Moi", "Ten_Banh_Moi"]);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-shuffle"></i> Theo dõi Chuyển loại Bánh (Từ Bánh A sang Bánh B)</div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="openConversionModal()">
+              <i class="fa-solid fa-circle-plus"></i> + Ghi nhận Chuyển loại
+            </button>
+            ${isAdminOrAccountant() ? `
+              <button class="btn btn-success" onclick="batchConfirmConversionAccounting()">
+                <i class="fa-solid fa-check-double"></i> Kế toán xác nhận Đã xử lý cuối tháng
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="margin-bottom:8px; font-size:13px; color:var(--text-muted);">
+            📌 Nhân viên sản xuất nhập trực tiếp khi đem bánh đi chế biến chuyển loại. Cuối tháng Kế toán tổng hợp xử lý 1 lần trên tồn kho thuế AMIS.
+          </div>
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" onchange="toggleSelectAll(this, 'conv-chk')"></th>
+                  <th>Ngày - Giờ</th>
+                  <th>Chi nhánh</th>
+                  <th>Mã Bánh A (Gốc)</th>
+                  <th>Tên Bánh A (Xuất ra)</th>
+                  <th>SL Gốc</th>
+                  <th>Mã Bánh B (Mới)</th>
+                  <th>Tên Bánh B (Thu về)</th>
+                  <th>SL Thu hồi</th>
+                  <th>Người nhập</th>
+                  <th>Trạng thái Kế toán</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="12" style="text-align:center; padding:20px;">Chưa có phát sinh chuyển loại bánh.</td></tr>` :
+                  rows.map(r => {
+                    const isLocked = Number(r.Khoa_So) === 1;
+                    return `
+                      <tr>
+                        <td><input type="checkbox" class="conv-chk" value="${r.Conv_ID}"></td>
+                        <td>${r.Ngay_TH} ${r.Gio_TH}</td>
+                        <td>${r.Ma_CN}</td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_Banh_Goc}')">${r.Ma_Banh_Goc}</span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ten_Banh_Goc}')"><b>${r.Ten_Banh_Goc}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.SL_Goc}')"><b style="color:var(--danger);">-${r.SL_Goc}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_Banh_Moi}')">${r.Ma_Banh_Moi}</span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ten_Banh_Moi}')"><b>${r.Ten_Banh_Moi}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.SL_Thu_Hoi}')"><b style="color:var(--success);">+${r.SL_Thu_Hoi}</b></span></td>
+                        <td>${r.Nguoi_Tao}</td>
+                        <td>
+                          <span class="badge ${r.Trang_Thai_Ke_Toan === 'Đã xử lý AMIS' ? 'badge-approved' : 'badge-pending'}">${r.Trang_Thai_Ke_Toan}</span>
+                        </td>
+                        <td>
+                          ${(!isLocked || isAdminOrAccountant()) ? `
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow('CONVERSIONS','Conv_ID','${r.Conv_ID}')"><i class="fa-solid fa-trash"></i></button>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openConversionModal() {
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+      const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
+      const opts = tpList.map(p => `<option value="${p.Ma_SP}">${p.Ma_SP} - ${p.Ten_SP} (${p.Don_Vi_Tinh})</option>`).join("");
+
+      showModal(
+        "Ghi nhận Chuyển loại Bánh (Bánh A ➔ Bánh B)",
+        `
+          <div class="form-row">
+            <label>Chi nhánh</label>
+            <input type="text" id="m-conv-branch" class="form-control" value="${branch}" readonly>
+          </div>
+          <div class="form-row">
+            <label>Bánh A (Bánh gốc đem đi chế biến lại)</label>
+            <select id="m-conv-from" class="form-select">${opts}</select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng Bánh A xuất ra</label>
+            <input type="number" id="m-conv-qty-from" class="form-control" placeholder="VD: 20" min="1">
+          </div>
+          <hr style="margin:12px 0; border-top:1px dashed #ccc;">
+          <div class="form-row">
+            <label>Bánh B (Thành phẩm mới thu được)</label>
+            <select id="m-conv-to" class="form-select">${opts}</select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng Bánh B thu hồi</label>
+            <input type="number" id="m-conv-qty-to" class="form-control" placeholder="VD: 15" min="1">
+          </div>
+          <div class="form-row">
+            <label>Ghi chú</label>
+            <input type="text" id="m-conv-note" class="form-control" placeholder="VD: Chuyển bánh mì chuột sang sấy bơ tỏi">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveConversionSubmit()"><i class="fa-solid fa-floppy-disk"></i> Lưu Chuyển loại</button>`
+      );
+    }
+
+    async function saveConversionSubmit() {
+      if (STATE.isSubmitting) return;
+      const maFrom = document.getElementById("m-conv-from").value;
+      const maTo = document.getElementById("m-conv-to").value;
+      const slFrom = Number(document.getElementById("m-conv-qty-from").value || 0);
+      const slTo = Number(document.getElementById("m-conv-qty-to").value || 0);
+
+      if (maFrom === maTo) return showToast("Bánh gốc (A) và Bánh mới (B) phải khác nhau!", true);
+      if (slFrom <= 0 || slTo <= 0) return showToast("Vui lòng nhập số lượng lớn hơn 0!", true);
+
+      const pFrom = STATE.products.find(p => p.Ma_SP === maFrom) || {};
+      const pTo = STATE.products.find(p => p.Ma_SP === maTo) || {};
+
+      STATE.isSubmitting = true;
+      try {
+        await callAPI("saveConversion", {
+          Ngay_TH: document.getElementById("global-date").value,
+          Ma_CN: document.getElementById("m-conv-branch").value,
+          Ma_Banh_Goc: maFrom,
+          Ten_Banh_Goc: pFrom.Ten_SP || "",
+          SL_Goc: slFrom,
+          Ma_Banh_Moi: maTo,
+          Ten_Banh_Moi: pTo.Ten_SP || "",
+          SL_Thu_Hoi: slTo,
+          Nguoi_Tao: STATE.user.Ho_Ten,
+          Ghi_Chu: document.getElementById("m-conv-note").value
+        });
+        closeModal();
+        showToast("Đã ghi nhận phiếu Chuyển loại bánh!");
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    async function batchConfirmConversionAccounting() {
+      const ids = getCheckedIds("conv-chk");
+      if (ids.length === 0) return showToast("Vui lòng tích chọn dòng cần xác nhận!", true);
+      await callAPI("updateConvStatus", { ids, status: "Đã xử lý AMIS", lockStatus: 1 });
+      showToast("Đã xác nhận xử lý chuyển loại trên AMIS!");
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 5: NGHIỆP VỤ THANH LÝ CUỐI NGÀY (KHÔNG CẦN NHẬP DOANH THU THỰC)
+    // ========================================================================
+    function renderLiquidationsView() {
+      const container = document.getElementById("menu-view-container");
+      const rows = filterBySearchKeyword(STATE.currentData, ["Ma_Thanh_Pham", "Ten_Thanh_Pham", "Hinh_Thuc_TL"]);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-tags"></i> Nhật ký Thanh lý Bánh cuối ngày</div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="openLiquidationModal()">
+              <i class="fa-solid fa-circle-plus"></i> + Nhập bánh Thanh lý
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Ngày - Giờ</th>
+                  <th>Chi nhánh</th>
+                  <th>Mã Daisy</th>
+                  <th>Mã Bánh</th>
+                  <th>Tên thành phẩm</th>
+                  <th>ĐVT</th>
+                  <th>Số lượng Thanh lý</th>
+                  <th>Hình thức thanh lý</th>
+                  <th>Người nhập</th>
+                  <th>Ghi chú</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="12" style="text-align:center; padding:20px;">Chưa có dữ liệu thanh lý trong ngày.</td></tr>` :
+                  rows.map((r, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td>${r.Ngay_TH} ${r.Gio_TH}</td>
+                      <td>${r.Ma_CN}</td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ma_Daisy}')">${r.Ma_Daisy}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ma_Thanh_Pham}')">${r.Ma_Thanh_Pham}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${r.Ten_Thanh_Pham}')"><b>${r.Ten_Thanh_Pham}</b></span></td>
+                      <td>${r.DVT}</td>
+                      <td><span class="copy-cell" onclick="copyText('${r.SL_Thanh_Ly}')"><b>${r.SL_Thanh_Ly}</b></span></td>
+                      <td><span class="badge badge-info">${r.Hinh_Thuc_TL}</span></td>
+                      <td>${r.Nguoi_Tao}</td>
+                      <td>${r.Ghi_Chu || '-'}</td>
+                      <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteRow('LIQUIDATIONS','Liq_ID','${r.Liq_ID}')"><i class="fa-solid fa-trash"></i></button>
+                      </td>
+                    </tr>
+                  `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openLiquidationModal() {
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+      const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
+      const opts = tpList.map(p => `<option value="${p.Ma_SP}">${p.Ma_SP} - ${p.Ten_SP} (${p.Don_Vi_Tinh})</option>`).join("");
+
+      showModal(
+        "Ghi nhận Bánh Thanh lý cuối ngày",
+        `
+          <div class="form-row">
+            <label>Chi nhánh</label>
+            <input type="text" id="m-liq-branch" class="form-control" value="${branch}" readonly>
+          </div>
+          <div class="form-row">
+            <label>Chọn loại bánh thanh lý</label>
+            <select id="m-liq-product" class="form-select">${opts}</select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng thanh lý</label>
+            <input type="number" id="m-liq-qty" class="form-control" placeholder="VD: 15" min="1">
+          </div>
+          <div class="form-row">
+            <label>Hình thức thanh lý</label>
+            <select id="m-liq-type" class="form-select">
+              <option value="Giảm giá 50% cuối ngày">Giảm giá 50% cuối ngày</option>
+              <option value="Mua 1 tặng 1">Mua 1 tặng 1</option>
+              <option value="Đồng giá cuối ca">Đồng giá cuối ca</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Ghi chú</label>
+            <input type="text" id="m-liq-note" class="form-control">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveLiquidationSubmit()"><i class="fa-solid fa-floppy-disk"></i> Lưu Thanh lý</button>`
+      );
+    }
+
+    async function saveLiquidationSubmit() {
+      if (STATE.isSubmitting) return;
+      const maSP = document.getElementById("m-liq-product").value;
+      const qty = Number(document.getElementById("m-liq-qty").value || 0);
+      if (qty <= 0) return showToast("Vui lòng nhập số lượng thanh lý lớn hơn 0!", true);
+
+      const prod = STATE.products.find(p => p.Ma_SP === maSP) || {};
+      STATE.isSubmitting = true;
+      try {
+        await callAPI("saveLiquidation", {
+          Ngay_TH: document.getElementById("global-date").value,
+          Ma_CN: document.getElementById("m-liq-branch").value,
+          Ma_Thanh_Pham: maSP,
+          Ten_Thanh_Pham: prod.Ten_SP || "",
+          DVT: prod.Don_Vi_Tinh || "Cái",
+          SL_Thanh_Ly: qty,
+          Hinh_Thuc_TL: document.getElementById("m-liq-type").value,
+          Nguoi_Tao: STATE.user.Ho_Ten,
+          Ghi_Chu: document.getElementById("m-liq-note").value
+        });
+        closeModal();
+        showToast("Đã lưu thông tin Thanh lý!");
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    // ========================================================================
+    // VIEW 6: NGHIỆP VỤ HỦY HÀNG (NHẬP LIỆU DỰA VÀO ĐÂY LẬP XUẤT HỦY DAISY)
+    // ========================================================================
+    function renderWastesView() {
+      const container = document.getElementById("menu-view-container");
+      const rows = filterBySearchKeyword(STATE.currentData, ["Ma_SP", "Ten_SP", "Ma_Daisy", "Nguyen_Nhan"]);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-trash-can"></i> Quản lý Hủy hàng & Xuất hủy trên Daisy</div>
+          <div class="header-actions">
+            <button class="btn btn-danger" onclick="openWasteModal()">
+              <i class="fa-solid fa-circle-plus"></i> + Báo cáo Hàng hủy
+            </button>
+            ${canInputDataEntry() ? `
+              <button class="btn btn-success" onclick="batchConfirmWasteDaisy()">
+                <i class="fa-solid fa-check-double"></i> Xác nhận Đã xuất hủy Daisy
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="margin-bottom:8px; font-size:13px; color:var(--text-muted);">
+            💡 <b>Dành cho Nhập liệu:</b> Bấm vào <b>Mã Daisy</b> và <b>SL Hủy</b> để copy lập phiếu Xuất hủy trên phần mềm Daisy, sau đó tích chọn và bấm <b>"Xác nhận Đã xuất hủy Daisy"</b>.
+          </div>
+          <div class="table-responsive">
+            <table class="native-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" onchange="toggleSelectAll(this, 'waste-chk')"></th>
+                  <th>Ngày - Giờ</th>
+                  <th>Chi nhánh</th>
+                  <th>Nhóm</th>
+                  <th>Mã Daisy</th>
+                  <th>Mã Nội bộ</th>
+                  <th>Tên hàng hủy</th>
+                  <th>SL Hủy</th>
+                  <th>Nguyên nhân hủy</th>
+                  <th>Người báo</th>
+                  <th>Trạng thái Daisy</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `<tr><td colspan="12" style="text-align:center; padding:20px;">Không có hàng hủy trong ngày.</td></tr>` :
+                  rows.map(r => {
+                    const isLocked = Number(r.Khoa_So) === 1;
+                    return `
+                      <tr>
+                        <td><input type="checkbox" class="waste-chk" value="${r.Waste_ID}"></td>
+                        <td>${r.Ngay_TH} ${r.Gio_TH}</td>
+                        <td>${r.Ma_CN}</td>
+                        <td>${r.Phan_Loai_SP}</td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_Daisy}')"><b>${r.Ma_Daisy}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_SP}')">${r.Ma_SP}</span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.Ten_SP}')"><b>${r.Ten_SP}</b></span></td>
+                        <td><span class="copy-cell" onclick="copyText('${r.SL_Huy}')"><b style="color:var(--danger); font-size:15px;">${r.SL_Huy}</b></span> ${r.DVT}</td>
+                        <td>${r.Nguyen_Nhan}</td>
+                        <td>${r.Nguoi_Bao_Cao}</td>
+                        <td>
+                          <span class="badge ${r.Trang_Thai_Daisy === 'Đã xuất hủy Daisy' ? 'badge-approved' : 'badge-pending'}">${r.Trang_Thai_Daisy}</span>
+                          ${isLocked ? `<i class="fa-solid fa-lock" style="color:#6c757d; margin-left:4px;"></i>` : ''}
+                        </td>
+                        <td>
+                          ${isAdminOrAccountant() ? `
+                            <button class="btn btn-sm btn-warning" onclick="toggleLock('WASTES','Waste_ID','${r.Waste_ID}', ${isLocked ? 0 : 1})">
+                              <i class="fa-solid ${isLocked ? 'fa-lock-open' : 'fa-lock'}"></i>
+                            </button>
+                          ` : ''}
+                          ${(!isLocked || isAdminOrAccountant()) ? `
+                            <button class="btn btn-sm btn-danger" onclick="deleteRow('WASTES','Waste_ID','${r.Waste_ID}')"><i class="fa-solid fa-trash"></i></button>
+                          ` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function openWasteModal() {
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+      const opts = STATE.products.map(p => `<option value="${p.Ma_SP}">[${p.Phan_Loai}] ${p.Ma_SP} - ${p.Ten_SP} (${p.Don_Vi_Tinh})</option>`).join("");
+
+      showModal(
+        "Báo cáo Hủy hàng (Thành phẩm / NVL / VTTH)",
+        `
+          <div class="form-row">
+            <label>Chi nhánh</label>
+            <input type="text" id="m-waste-branch" class="form-control" value="${branch}" readonly>
+          </div>
+          <div class="form-row">
+            <label>Chọn mặt hàng hủy</label>
+            <select id="m-waste-product" class="form-select">${opts}</select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng hủy</label>
+            <input type="number" step="0.01" id="m-waste-qty" class="form-control" placeholder="Nhập số lượng..." min="0.01">
+          </div>
+          <div class="form-row">
+            <label>Nguyên nhân hủy</label>
+            <select id="m-waste-reason" class="form-select">
+              <option value="Hết hạn cuối ngày (Không bán hết)">Hết hạn cuối ngày (Không bán hết)</option>
+              <option value="Hỏng kỹ thuật (Cháy lò / Không nở)">Hỏng kỹ thuật (Cháy lò / Không nở)</option>
+              <option value="Rơi vỡ / Rách bao bì">Rơi vỡ / Rách bao bì</option>
+              <option value="Nguyên liệu hỏng / Ẩm mốc">Nguyên liệu hỏng / Ẩm mốc</option>
+              <option value="Nguyên nhân khác">Nguyên nhân khác</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Ghi chú chi tiết</label>
+            <input type="text" id="m-waste-note" class="form-control">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-danger" onclick="saveWasteSubmit()"><i class="fa-solid fa-floppy-disk"></i> Lưu Báo cáo Hủy</button>`
+      );
+    }
+
+    async function saveWasteSubmit() {
+      if (STATE.isSubmitting) return;
+      const maSP = document.getElementById("m-waste-product").value;
+      const qty = Number(document.getElementById("m-waste-qty").value || 0);
+      if (qty <= 0) return showToast("Vui lòng nhập số lượng hủy lớn hơn 0!", true);
+
+      const prod = STATE.products.find(p => p.Ma_SP === maSP) || {};
+      STATE.isSubmitting = true;
+      try {
+        await callAPI("saveWaste", {
+          Ngay_TH: document.getElementById("global-date").value,
+          Ma_CN: document.getElementById("m-waste-branch").value,
+          Phan_Loai_SP: prod.Phan_Loai || "Thành phẩm",
+          Ma_SP: maSP,
+          Ten_SP: prod.Ten_SP || "",
+          DVT: prod.Don_Vi_Tinh || "Cái",
+          SL_Huy: qty,
+          Nguyen_Nhan: document.getElementById("m-waste-reason").value,
+          Nguoi_Bao_Cao: STATE.user.Ho_Ten,
+          Ghi_Chu: document.getElementById("m-waste-note").value
+        });
+        closeModal();
+        showToast("Đã ghi nhận báo cáo Hủy hàng!");
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    async function batchConfirmWasteDaisy() {
+      const ids = getCheckedIds("waste-chk");
+      if (ids.length === 0) return showToast("Vui lòng tích chọn các dòng hủy cần xác nhận!", true);
+      const res = await callAPI("updateWasteStatusDaisy", {
+        ids,
+        status: "Đã xuất hủy Daisy",
+        user: STATE.user.Ho_Ten
+      });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 7: KIỂM KÊ (UPLOAD TỒN SỔ SÁCH + NHẬP NHANH 3 NHÓM + BÁO CÁO HAO HỤT)
+    // ========================================================================
+    function renderInventoryView() {
+      const container = document.getElementById("menu-view-container");
+      const month = document.getElementById("global-month").value;
+      const branch = document.getElementById("global-branch").value;
+
+      // Nếu kỳ kiểm kê chưa có dữ liệu trong INVENTORY thì kết hợp danh mục PRODUCTS để nhân viên vẫn đếm trước được
+      let displayList = [...STATE.currentData];
+      if (displayList.length === 0 && branch !== "ALL") {
+        displayList = STATE.products.map(p => ({
+          Inv_ID: "",
+          Ky_Kiem_Ke: month,
+          Ma_CN: branch,
+          Phan_Loai: p.Phan_Loai,
+          Ma_SP: p.Ma_SP,
+          Ten_SP: p.Ten_SP,
+          DVT: p.Don_Vi_Tinh,
+          Don_Gia: p.Don_Gia_Von || 0,
+          Ton_So_Sach: 0,
+          SL_SX_Hoac_Tieu_Hao_BOM: 0,
+          SL_Bien_Dong_Khac: 0,
+          Ton_Ly_Thuyet: 0,
+          Ton_Thuc_Te: 0,
+          Chenh_Lech_So_Sach: 0,
+          Chenh_Lech_Ly_Thuyet: 0,
+          Gia_Tri_Chenh_Lech: 0,
+          Giai_Trinh: "",
+          Khoa_So: 0
+        }));
+      }
+
+      const filteredRows = filterBySearchKeyword(displayList, ["Ma_SP", "Ten_SP", "Phan_Loai"]);
+      const groupRows = STATE.invGroupTab === "report"
+        ? filteredRows
+        : filteredRows.filter(r => r.Phan_Loai === STATE.invGroupTab);
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-clipboard-check"></i> Kiểm kê Định kỳ & Tính toán Thất thoát (Kỳ ${month})</div>
+          <div class="header-actions">
+            ${isAdminOrAccountant() ? `
+              <button class="btn btn-outline" onclick="downloadSampleInventoryFile()">
+                <i class="fa-solid fa-download"></i> Tải file mẫu Upload
+              </button>
+              <label class="btn btn-primary" style="margin:0;">
+                <i class="fa-solid fa-file-arrow-up"></i> Upload Excel Tồn Sổ Sách
+                <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileUploadBookInventory(event)">
+              </label>
+              <button class="btn btn-warning" onclick="lockUnlockInventoryPeriod(1)">
+                <i class="fa-solid fa-lock"></i> Chốt & Khóa Kỳ Kiểm kê
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- 3 NHÓM NHẬP NHANH CHO ĐIỆN THOẠI + TAB BÁO CÁO TỔNG HỢP -->
+        <div class="sub-tabs">
+          <button class="sub-tab-btn ${STATE.invGroupTab === 'Thành phẩm' ? 'active' : ''}" onclick="STATE.invGroupTab='Thành phẩm'; renderInventoryView();">
+            🥖 1. Nhập nhanh Thành phẩm
+          </button>
+          <button class="sub-tab-btn ${STATE.invGroupTab === 'NVL' ? 'active' : ''}" onclick="STATE.invGroupTab='NVL'; renderInventoryView();">
+            🌾 2. Nhập nhanh Nguyên vật liệu (NVL)
+          </button>
+          <button class="sub-tab-btn ${STATE.invGroupTab === 'VTTH' ? 'active' : ''}" onclick="STATE.invGroupTab='VTTH'; renderInventoryView();">
+            🛍️ 3. Nhập nhanh Vật tư tiêu hao (VTTH)
+          </button>
+          <button class="sub-tab-btn ${STATE.invGroupTab === 'report' ? 'active' : ''}" onclick="STATE.invGroupTab='report'; renderInventoryView();">
+            📊 4. Báo cáo Kiểm kê & Đối chiếu BOM Toàn diện
+          </button>
+        </div>
+
+        ${STATE.invGroupTab !== 'report' ? `
+          <!-- BẢNG NHẬP NHANH THEO 3 NHÓM CHO NHÂN VIÊN SX / QUẢN LÝ / NHẬP LIỆU -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+              <div style="font-weight:bold; color:var(--primary); font-size:15px;">
+                Nhóm đang chọn: <b>${STATE.invGroupTab}</b> (${groupRows.length} mặt hàng)
+              </div>
+              <button class="btn btn-success" id="btn-save-inv-batch" onclick="saveQuickInventoryGroup()">
+                <i class="fa-solid fa-floppy-disk"></i> LƯU SỐ ĐẾM THỰC TẾ NHÓM NÀY
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>Mã hàng</th>
+                    <th>Tên mặt hàng (${STATE.invGroupTab})</th>
+                    <th>ĐVT</th>
+                    <th>Tồn Sổ Sách</th>
+                    <th style="min-width:130px;">Số đếm Thực tế</th>
+                    <th style="min-width:170px;">Giải trình chênh lệch (nếu có)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${groupRows.length === 0 ? `<tr><td colspan="6" style="text-align:center; padding:18px;">Chưa có mặt hàng nào thuộc nhóm này.</td></tr>` :
+                    groupRows.map((r, i) => `
+                      <tr class="inv-input-row"
+                          data-inv-id="${r.Inv_ID || ''}"
+                          data-masp="${r.Ma_SP}"
+                          data-tensp="${r.Ten_SP}"
+                          data-dvt="${r.DVT}"
+                          data-phanloai="${r.Phan_Loai}">
+                        <td><span class="copy-cell" onclick="copyText('${r.Ma_SP}')"><b>${r.Ma_SP}</b></span></td>
+                        <td><b>${r.Ten_SP}</b></td>
+                        <td>${r.DVT}</td>
+                        <td>${r.Ton_So_Sach || 0}</td>
+                        <td>
+                          <input type="number" step="0.01" class="form-control inv-actual-input"
+                                 value="${r.Ton_Thuc_Te !== undefined ? r.Ton_Thuc_Te : 0}"
+                                 ${Number(r.Khoa_So) === 1 ? 'disabled' : ''}
+                                 style="font-weight:bold; font-size:15px; border-color:var(--primary);">
+                        </td>
+                        <td>
+                          <input type="text" class="form-control inv-note-input"
+                                 value="${r.Giai_Trinh || ''}"
+                                 placeholder="Lý do lệch..."
+                                 ${Number(r.Khoa_So) === 1 ? 'disabled' : ''}>
+                        </td>
+                      </tr>
+                    `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : `
+          <!-- BÁO CÁO ĐỐI CHIẾU KIỂM KÊ & TÍNH THẤT THOÁT ĐỊNH MỨC BOM -->
+          <div class="card">
+            <div style="margin-bottom:10px; font-size:13px; color:var(--text-muted);">
+              📌 <b>Công thức tự động:</b> Hệ thống tự động quét tổng số bánh thực tế sản xuất trong kỳ nhân với <b>Định mức BOM</b> và cộng/trừ <b>Chuyển loại, Hủy hàng</b> để tính ra Tồn lý thuyết & Chênh lệch thất thoát.
+            </div>
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>Nhóm</th>
+                    <th>Mã hàng</th>
+                    <th>Tên mặt hàng</th>
+                    <th>ĐVT</th>
+                    <th>Đơn giá</th>
+                    <th>Tồn Sổ Sách</th>
+                    <th>SX / Tiêu hao BOM</th>
+                    <th>Hủy / Chuyển loại</th>
+                    <th>Tồn Lý thuyết</th>
+                    <th>Tồn Thực tế</th>
+                    <th>Lệch vs Sổ sách</th>
+                    <th>Lệch vs Lý thuyết BOM</th>
+                    <th>Giá trị lệch (VNĐ)</th>
+                    <th>Giải trình</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${groupRows.length === 0 ? `<tr><td colspan="14" style="text-align:center; padding:20px;">Chưa có dữ liệu kiểm kê cho kỳ này.</td></tr>` :
+                    groupRows.map(r => {
+                      const diffBook = Number(r.Chenh_Lech_So_Sach || 0);
+                      const diffBom = Number(r.Chenh_Lech_Ly_Thuyet || 0);
+                      return `
+                        <tr class="${diffBook < 0 ? 'row-alert' : ''}">
+                          <td><span class="badge badge-draft">${r.Phan_Loai}</span></td>
+                          <td><span class="copy-cell" onclick="copyText('${r.Ma_SP}')"><b>${r.Ma_SP}</b></span></td>
+                          <td><span class="copy-cell" onclick="copyText('${r.Ten_SP}')"><b>${r.Ten_SP}</b></span></td>
+                          <td>${r.DVT}</td>
+                          <td>${formatNumber(r.Don_Gia || 0)}</td>
+                          <td><b>${r.Ton_So_Sach}</b></td>
+                          <td>${r.SL_SX_Hoac_Tieu_Hao_BOM || 0}</td>
+                          <td>${r.SL_Bien_Dong_Khac || 0}</td>
+                          <td><b>${r.Ton_Ly_Thuyet || 0}</b></td>
+                          <td><span class="copy-cell" onclick="copyText('${r.Ton_Thuc_Te}')"><b style="color:var(--primary); font-size:15px;">${r.Ton_Thuc_Te}</b></span></td>
+                          <td style="font-weight:bold; color:${diffBook < 0 ? 'var(--danger)' : (diffBook > 0 ? 'var(--success)' : '#333')};">
+                            ${diffBook > 0 ? '+' + diffBook : diffBook}
+                          </td>
+                          <td style="font-weight:bold; color:${diffBom < 0 ? 'var(--danger)' : 'var(--success)'};">
+                            ${diffBom > 0 ? '+' + diffBom : diffBom}
+                          </td>
+                          <td style="font-weight:bold;">${formatNumber(r.Gia_Tri_Chenh_Lech || 0)}</td>
+                          <td>${r.Giai_Trinh || '-'}</td>
+                        </tr>
+                      `;
+                    }).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `}
+      `;
+    }
+
+    async function saveQuickInventoryGroup() {
+      if (STATE.isSubmitting) return;
+      const branch = getSelectedSingleBranch();
+      if (!branch) return;
+      const kyKiemKe = document.getElementById("global-month").value;
+
+      const domRows = document.querySelectorAll(".inv-input-row");
+      const items = [];
+      domRows.forEach(tr => {
+        items.push({
+          Inv_ID: tr.getAttribute("data-inv-id"),
+          Ma_SP: tr.getAttribute("data-masp"),
+          Ten_SP: tr.getAttribute("data-tensp"),
+          DVT: tr.getAttribute("data-dvt"),
+          Phan_Loai: tr.getAttribute("data-phanloai"),
+          Ton_Thuc_Te: Number(tr.querySelector(".inv-actual-input").value || 0),
+          Giai_Trinh: tr.querySelector(".inv-note-input").value.trim()
+        });
+      });
+
+      STATE.isSubmitting = true;
+      try {
+        const res = await callAPI("saveActualInventoryBatch", {
+          kyKiemKe,
+          branch,
+          items,
+          user: STATE.user.Ho_Ten
+        });
+        showToast(res.message);
+        reloadCurrentMenu();
+      } finally {
+        STATE.isSubmitting = false;
+      }
+    }
+
+    // Đọc file Excel Tồn sổ sách (Mã, Tên, ĐVT, Số lượng tồn, Đơn giá)
+    function handleFileUploadBookInventory(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const branch = getSelectedSingleBranch();
+      if (!branch) {
+        event.target.value = "";
+        return;
+      }
+      const kyKiemKe = document.getElementById("global-month").value;
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+
+          if (jsonRows.length === 0) {
+            return showToast("File Excel trống!", true);
+          }
+
+          // Map cột linh hoạt (hỗ trợ cả tiếng Việt có dấu và không dấu)
+          const parsedItems = jsonRows.map(r => {
+            const keys = Object.keys(r);
+            const findCol = (patterns) => {
+              const k = keys.find(key => patterns.some(p => key.toLowerCase().includes(p)));
+              return k ? r[k] : "";
+            };
+            return {
+              Ma_SP: String(findCol(["mã", "ma_sp", "ma hang", "code"]) || "").trim(),
+              Ten_SP: String(findCol(["tên", "ten_sp", "ten hang", "name"]) || "").trim(),
+              DVT: String(findCol(["đvt", "dvt", "đơn vị", "unit"]) || "").trim(),
+              Ton_So_Sach: Number(findCol(["tồn", "so luong", "số lượng", "ton_so_sach", "qty"]) || 0),
+              Don_Gia: Number(findCol(["giá", "đơn giá", "don_gia", "price"]) || 0),
+              Phan_Loai: String(findCol(["nhóm", "phân loại", "phan_loai"]) || "").trim()
+            };
+          }).filter(item => item.Ma_SP !== "");
+
+          if (parsedItems.length === 0) {
+            return showToast("Không tìm thấy cột 'Mã' trong file Excel! Hãy tải file mẫu để xem chuẩn cột.", true);
+          }
+
+          const res = await callAPI("uploadBookInventory", {
+            kyKiemKe,
+            ngayKiemKe: getTodayISO(),
+            branch,
+            items: parsedItems,
+            user: STATE.user.Ho_Ten
+          });
+          showToast(res.message);
+          reloadCurrentMenu();
+        } catch (err) {
+          showToast("Lỗi đọc file Excel: " + err.message, true);
+        } finally {
+          event.target.value = "";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function downloadSampleInventoryFile() {
+      const sampleData = STATE.products.map(p => ({
+        "Mã hàng": p.Ma_SP,
+        "Tên mặt hàng": p.Ten_SP,
+        "Phân loại": p.Phan_Loai,
+        "Đơn vị tính": p.Don_Vi_Tinh,
+        "Số lượng tồn": 100,
+        "Đơn giá": p.Don_Gia_Von || 0
+      }));
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Ton_So_Sach_Mau");
+      XLSX.writeFile(wb, "Mau_Upload_Ton_So_Sach_ASMART.xlsx");
+    }
+
+    async function lockUnlockInventoryPeriod(status) {
+      const kyKiemKe = document.getElementById("global-month").value;
+      const branch = document.getElementById("global-branch").value;
+      const res = await callAPI("lockInventoryPeriod", { kyKiemKe, branch, lockStatus: status });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 8: DANH MỤC HÀNG HÓA & ĐỊNH MỨC CÔNG THỨC (BOM)
+    // ========================================================================
+    function renderCatalogView() {
+      const container = document.getElementById("menu-view-container");
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-boxes-stacked"></i> Quản lý Danh mục Mã hàng (Daisy - AMIS) & Định mức BOM</div>
+          <div class="header-actions">
+            <button class="btn btn-success" onclick="exportCurrentMenuExcel()">
+              <i class="fa-solid fa-file-excel"></i> Xuất Excel Danh mục / BOM
+            </button>
+            ${STATE.catalogTab === 'products' ? `
+              <button class="btn btn-primary" onclick="openProductModal()">
+                <i class="fa-solid fa-circle-plus"></i> + Thêm Mã hàng mới
+              </button>
+            ` : `
+              <button class="btn btn-primary" onclick="openBOMModal()">
+                <i class="fa-solid fa-circle-plus"></i> + Thêm dòng Định mức BOM
+              </button>
+            `}
+          </div>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn ${STATE.catalogTab === 'products' ? 'active' : ''}" onclick="STATE.catalogTab='products'; renderCatalogView();">
+            📦 1. Danh mục Hàng hóa: Thành phẩm, NVL & VTTH (${STATE.products.length})
+          </button>
+          <button class="sub-tab-btn ${STATE.catalogTab === 'boms' ? 'active' : ''}" onclick="STATE.catalogTab='boms'; renderCatalogView();">
+            ⚖️ 2. Định mức Công thức Sản xuất - BOM (${STATE.boms.length})
+          </button>
+        </div>
+
+        ${STATE.catalogTab === 'products' ? `
+          <div class="card">
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Mã Chuẩn (App)</th>
+                    <th>Mã Daisy (POS)</th>
+                    <th>Mã AMIS (Thuế/Nội bộ)</th>
+                    <th>Tên Hàng hóa</th>
+                    <th>Phân loại</th>
+                    <th>ĐVT</th>
+                    <th>Đơn giá vốn</th>
+                    <th>Giá bán niêm yết</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${STATE.products.map((p, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td><span class="copy-cell" onclick="copyText('${p.Ma_SP}')"><b>${p.Ma_SP}</b></span></td>
+                      <td><span class="copy-cell" onclick="copyText('${p.Ma_Daisy}')">${p.Ma_Daisy || '-'}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${p.Ma_AMIS}')">${p.Ma_AMIS || '-'}</span></td>
+                      <td><span class="copy-cell" onclick="copyText('${p.Ten_SP}')"><b>${p.Ten_SP}</b></span></td>
+                      <td><span class="badge badge-info">${p.Phan_Loai}</span></td>
+                      <td>${p.Don_Vi_Tinh}</td>
+                      <td>${formatNumber(p.Don_Gia_Von || 0)}</td>
+                      <td>${formatNumber(p.Gia_Ban || 0)}</td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" onclick='openProductModal(${JSON.stringify(p)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteProduct','${p.Ma_SP}')"><i class="fa-solid fa-trash"></i></button>
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : `
+          <div class="card">
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Mã Thành phẩm</th>
+                    <th>Tên Bánh Thành phẩm</th>
+                    <th>Mã NVL / VTTH</th>
+                    <th>Tên NVL / VTTH cấu thành</th>
+                    <th>Nhóm</th>
+                    <th>ĐVT</th>
+                    <th>SL Định mức / 1 ĐVT Bánh</th>
+                    <th>Ghi chú công thức</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${STATE.boms.map((b, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td><b>${b.Ma_Thanh_Pham}</b></td>
+                      <td><b>${b.Ten_Thanh_Pham}</b></td>
+                      <td>${b.Ma_NVL}</td>
+                      <td>${b.Ten_NVL}</td>
+                      <td>${b.Phan_Loai_NVL}</td>
+                      <td>${b.Don_Vi_Tinh}</td>
+                      <td><b style="color:var(--primary);">${b.SL_Dinh_Muc}</b></td>
+                      <td>${b.Ghi_Chu || '-'}</td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" onclick='openBOMModal(${JSON.stringify(b)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteBOM','${b.BOM_ID}')"><i class="fa-solid fa-trash"></i></button>
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `}
+      `;
+    }
+
+    function openProductModal(p = null) {
+      showModal(
+        p ? "Cập nhật Hàng hóa" : "Thêm Mã Hàng hóa mới",
+        `
+          <div class="form-row">
+            <label>Mã chuẩn trên App (VD: BM001, NVL001, VT001)</label>
+            <input type="text" id="m-prod-code" class="form-control" value="${p ? p.Ma_SP : ''}" ${p ? 'readonly' : ''}>
+          </div>
+          <div class="form-row">
+            <label>Mã trên phần mềm Daisy (POS)</label>
+            <input type="text" id="m-prod-daisy" class="form-control" value="${p ? (p.Ma_Daisy || '') : ''}">
+          </div>
+          <div class="form-row">
+            <label>Mã trên phần mềm AMIS (Kho 155 / 152)</label>
+            <input type="text" id="m-prod-amis" class="form-control" value="${p ? (p.Ma_AMIS || '') : ''}">
+          </div>
+          <div class="form-row">
+            <label>Tên mặt hàng</label>
+            <input type="text" id="m-prod-name" class="form-control" value="${p ? p.Ten_SP : ''}">
+          </div>
+          <div class="form-row">
+            <label>Phân loại nhóm (Dùng để chia 3 bảng kiểm kê)</label>
+            <select id="m-prod-cat" class="form-select">
+              <option value="Thành phẩm" ${p && p.Phan_Loai === 'Thành phẩm' ? 'selected' : ''}>Thành phẩm</option>
+              <option value="NVL" ${p && p.Phan_Loai === 'NVL' ? 'selected' : ''}>NVL (Nguyên vật liệu)</option>
+              <option value="VTTH" ${p && p.Phan_Loai === 'VTTH' ? 'selected' : ''}>VTTH (Vật tư tiêu hao)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Đơn vị tính (Cái, Túi, Kg, Cuộn...)</label>
+            <input type="text" id="m-prod-unit" class="form-control" value="${p ? p.Don_Vi_Tinh : 'Cái'}">
+          </div>
+          <div class="form-row">
+            <label>Đơn giá vốn định mức (VNĐ)</label>
+            <input type="number" id="m-prod-cost" class="form-control" value="${p ? (p.Don_Gia_Von || 0) : 0}">
+          </div>
+          <div class="form-row">
+            <label>Giá bán niêm yết Daisy (VNĐ)</label>
+            <input type="number" id="m-prod-price" class="form-control" value="${p ? (p.Gia_Ban || 0) : 0}">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveProductSubmit()">Lưu Hàng hóa</button>`
+      );
+    }
+
+    async function saveProductSubmit() {
+      const Ma_SP = document.getElementById("m-prod-code").value.trim();
+      const Ten_SP = document.getElementById("m-prod-name").value.trim();
+      if (!Ma_SP || !Ten_SP) return showToast("Vui lòng nhập Mã và Tên mặt hàng!", true);
+
+      await callAPI("saveProduct", {
+        Ma_SP,
+        Ma_Daisy: document.getElementById("m-prod-daisy").value.trim(),
+        Ma_AMIS: document.getElementById("m-prod-amis").value.trim(),
+        Ten_SP,
+        Phan_Loai: document.getElementById("m-prod-cat").value,
+        Don_Vi_Tinh: document.getElementById("m-prod-unit").value.trim(),
+        Don_Gia_Von: Number(document.getElementById("m-prod-cost").value || 0),
+        Gia_Ban: Number(document.getElementById("m-prod-price").value || 0)
+      });
+      closeModal();
+      showToast("Đã lưu mặt hàng!");
+      reloadCurrentMenu();
+    }
+
+    function openBOMModal(b = null) {
+      const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
+      const nvlList = STATE.products.filter(p => p.Phan_Loai !== "Thành phẩm");
+
+      showModal(
+        b ? "Cập nhật Định mức BOM" : "Thêm dòng Định mức Công thức (BOM)",
+        `
+          <div class="form-row">
+            <label>Chọn Bánh Thành phẩm</label>
+            <select id="m-bom-tp" class="form-select">
+              ${tpList.map(p => `<option value="${p.Ma_SP}" ${b && b.Ma_Thanh_Pham === p.Ma_SP ? 'selected' : ''}>${p.Ma_SP} - ${p.Ten_SP}</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Chọn Nguyên vật liệu / Vật tư tiêu hao</label>
+            <select id="m-bom-nvl" class="form-select">
+              ${nvlList.map(p => `<option value="${p.Ma_SP}" ${b && b.Ma_NVL === p.Ma_SP ? 'selected' : ''}>[${p.Phan_Loai}] ${p.Ma_SP} - ${p.Ten_SP} (${p.Don_Vi_Tinh})</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Số lượng định mức tiêu hao cho 1 đơn vị bánh (VD: 0.06 Kg)</label>
+            <input type="number" step="0.0001" id="m-bom-qty" class="form-control" value="${b ? b.SL_Dinh_Muc : ''}">
+          </div>
+          <div class="form-row">
+            <label>Ghi chú</label>
+            <input type="text" id="m-bom-note" class="form-control" value="${b ? (b.Ghi_Chu || '') : ''}">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveBOMSubmit('${b ? b.BOM_ID : ''}')">Lưu Định mức BOM</button>`
+      );
+    }
+
+    async function saveBOMSubmit(bomId) {
+      const maTP = document.getElementById("m-bom-tp").value;
+      const maNVL = document.getElementById("m-bom-nvl").value;
+      const qty = Number(document.getElementById("m-bom-qty").value || 0);
+      if (qty <= 0) return showToast("Số lượng định mức phải lớn hơn 0!", true);
+
+      const tp = STATE.products.find(p => p.Ma_SP === maTP) || {};
+      const nvl = STATE.products.find(p => p.Ma_SP === maNVL) || {};
+
+      await callAPI("saveBOM", {
+        BOM_ID: bomId || undefined,
+        Ma_Thanh_Pham: maTP,
+        Ten_Thanh_Pham: tp.Ten_SP || "",
+        Ma_NVL: maNVL,
+        Ten_NVL: nvl.Ten_SP || "",
+        Phan_Loai_NVL: nvl.Phan_Loai || "NVL",
+        Don_Vi_Tinh: nvl.Don_Vi_Tinh || "Kg",
+        SL_Dinh_Muc: qty,
+        Ghi_Chu: document.getElementById("m-bom-note").value
+      });
+      closeModal();
+      showToast("Đã lưu định mức BOM!");
+      reloadCurrentMenu();
+    }
+
+    async function deleteCatalogItem(action, id) {
+      if (!confirm("Bạn có chắc chắn muốn xóa mục này?")) return;
+      await callAPI(action, { id });
+      showToast("Đã xóa thành công!");
+      reloadCurrentMenu();
+    }
+
+    // ========================================================================
+    // VIEW 9: QUẢN LÝ NGƯỜI DÙNG, PHÂN QUYỀN MENU & CHI NHÁNH
+    // ========================================================================
+    function renderUsersView() {
+      const container = document.getElementById("menu-view-container");
+
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-users-gear"></i> Quản lý Người dùng, Phân quyền Menu & Chi nhánh</div>
+          <div class="header-actions">
+            ${STATE.userTab === 'users' ? `
+              <button class="btn btn-primary" onclick="openUserModal()">
+                <i class="fa-solid fa-user-plus"></i> + Thêm Người dùng mới
+              </button>
+            ` : `
+              <button class="btn btn-primary" onclick="openBranchModal()">
+                <i class="fa-solid fa-store"></i> + Thêm Chi nhánh mới
+              </button>
+            `}
+          </div>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn ${STATE.userTab === 'users' ? 'active' : ''}" onclick="STATE.userTab='users'; renderUsersView();">
+            👤 1. Danh sách Tài khoản & Phân quyền (${STATE.usersList.length})
+          </button>
+          <button class="sub-tab-btn ${STATE.userTab === 'branches' ? 'active' : ''}" onclick="STATE.userTab='branches'; renderUsersView();">
+            🏬 2. Danh mục Chi nhánh (${STATE.branches.length})
+          </button>
+        </div>
+
+        ${STATE.userTab === 'users' ? `
+          <div class="card">
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Tài khoản</th>
+                    <th>Họ và tên</th>
+                    <th>Vị trí / Vai trò</th>
+                    <th>Chi nhánh phụ trách</th>
+                    <th>Menu được cấp quyền</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${STATE.usersList.map((u, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td><b>${u.Username}</b></td>
+                      <td><b>${u.Ho_Ten}</b></td>
+                      <td><span class="badge badge-info">${u.Vai_Tro}</span></td>
+                      <td><b>${u.Chi_Nhanh_Phu_Trach}</b></td>
+                      <td style="font-size:12px; max-width:260px;">${u.Menu_Quyen}</td>
+                      <td><span class="badge ${u.Trang_Thai === 'Hoạt động' ? 'badge-approved' : 'badge-danger'}">${u.Trang_Thai}</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" onclick='openUserModal(${JSON.stringify(u)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteUser','${u.User_ID}')"><i class="fa-solid fa-trash"></i></button>
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : `
+          <div class="card">
+            <div class="table-responsive">
+              <table class="native-table">
+                <thead>
+                  <tr>
+                    <th>Mã CN</th>
+                    <th>Tên Chi nhánh</th>
+                    <th>Địa chỉ</th>
+                    <th>Quản lý phụ trách</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${STATE.branches.map(b => `
+                    <tr>
+                      <td><b>${b.Ma_CN}</b></td>
+                      <td><b>${b.Ten_CN}</b></td>
+                      <td>${b.Dia_Chi || '-'}</td>
+                      <td>${b.Quan_Ly || '-'}</td>
+                      <td><span class="badge badge-approved">${b.Trang_Thai}</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" onclick='openBranchModal(${JSON.stringify(b)})'><i class="fa-solid fa-pen"></i></button>
+                      </td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `}
+      `;
+    }
+
+    function openUserModal(u = null) {
+      const roles = ["Nhân viên sản xuất", "Quản lý", "Nhập liệu", "Kế toán", "Giám đốc siêu thị", "Admin"];
+      const userMenus = u ? (u.Menu_Quyen === "ALL" ? ALL_MENUS.map(m => m.id) : String(u.Menu_Quyen).split(",").map(s => s.trim())) : ["plans", "production", "conversions", "liquidations", "wastes", "inventory"];
+
+      showModal(
+        u ? "Cập nhật Người dùng & Phân quyền" : "Thêm Người dùng mới",
+        `
+          <div class="form-row">
+            <label>Tên đăng nhập (Username)</label>
+            <input type="text" id="m-user-username" class="form-control" value="${u ? u.Username : ''}" ${u ? 'readonly' : ''}>
+          </div>
+          <div class="form-row">
+            <label>Mật khẩu ${u ? '(Để trống nếu giữ nguyên mật khẩu cũ)' : '(Mặc định: 123456)'}</label>
+            <input type="password" id="m-user-pass" class="form-control" placeholder="${u ? '********' : '123456'}">
+          </div>
+          <div class="form-row">
+            <label>Họ và tên nhân sự</label>
+            <input type="text" id="m-user-name" class="form-control" value="${u ? u.Ho_Ten : ''}">
+          </div>
+          <div class="form-row">
+            <label>Vị trí công việc</label>
+            <select id="m-user-role" class="form-select">
+              ${roles.map(r => `<option value="${r}" ${u && u.Vai_Tro === r ? 'selected' : ''}>${r}</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Chi nhánh phụ trách (Nhập ALL hoặc tên chi nhánh: Thọ Xuân, Tĩnh Gia)</label>
+            <input type="text" id="m-user-branch" class="form-control" value="${u ? u.Chi_Nhanh_Phu_Trach : 'Thọ Xuân'}">
+          </div>
+          <div class="form-row">
+            <label>Phân quyền truy cập Menu</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; background:#f8fafc; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+              ${ALL_MENUS.map(m => `
+                <label style="font-weight:normal; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                  <input type="checkbox" class="user-menu-chk" value="${m.id}" ${userMenus.includes(m.id) ? 'checked' : ''}>
+                  ${m.name}
+                </label>
+              `).join("")}
+            </div>
+          </div>
+          <div class="form-row">
+            <label>Trạng thái</label>
+            <select id="m-user-status" class="form-select">
+              <option value="Hoạt động" ${u && u.Trang_Thai === 'Hoạt động' ? 'selected' : ''}>Hoạt động</option>
+              <option value="Đã khóa" ${u && u.Trang_Thai === 'Đã khóa' ? 'selected' : ''}>Đã khóa</option>
+            </select>
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveUserSubmit('${u ? u.User_ID : ''}')">Lưu Người dùng</button>`
+      );
+    }
+
+    async function saveUserSubmit(userId) {
+      const checkedMenus = Array.from(document.querySelectorAll(".user-menu-chk:checked")).map(c => c.value);
+      const role = document.getElementById("m-user-role").value;
+
+      await callAPI("saveUser", {
+        User_ID: userId || undefined,
+        Username: document.getElementById("m-user-username").value.trim(),
+        Password: document.getElementById("m-user-pass").value.trim(),
+        Ho_Ten: document.getElementById("m-user-name").value.trim(),
+        Vai_Tro: role,
+        Chi_Nhanh_Phu_Trach: document.getElementById("m-user-branch").value.trim(),
+        Menu_Quyen: role === "Admin" ? "ALL" : checkedMenus.join(","),
+        Trang_Thai: document.getElementById("m-user-status").value
+      });
+      closeModal();
+      showToast("Đã lưu thông tin người dùng!");
+      reloadCurrentMenu();
+    }
+
+    function openBranchModal(b = null) {
+      showModal(
+        b ? "Cập nhật Chi nhánh" : "Thêm Chi nhánh mới",
+        `
+          <div class="form-row">
+            <label>Mã Chi nhánh (VD: CN_TX)</label>
+            <input type="text" id="m-br-code" class="form-control" value="${b ? b.Ma_CN : ''}">
+          </div>
+          <div class="form-row">
+            <label>Tên Chi nhánh (VD: Thọ Xuân, Tĩnh Gia)</label>
+            <input type="text" id="m-br-name" class="form-control" value="${b ? b.Ten_CN : ''}">
+          </div>
+          <div class="form-row">
+            <label>Địa chỉ</label>
+            <input type="text" id="m-br-addr" class="form-control" value="${b ? (b.Dia_Chi || '') : ''}">
+          </div>
+          <div class="form-row">
+            <label>Quản lý chi nhánh</label>
+            <input type="text" id="m-br-mgr" class="form-control" value="${b ? (b.Quan_Ly || '') : ''}">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="saveBranchSubmit()">Lưu Chi nhánh</button>`
+      );
+    }
+
+    async function saveBranchSubmit() {
+      await callAPI("saveBranch", {
+        Ma_CN: document.getElementById("m-br-code").value.trim(),
+        Ten_CN: document.getElementById("m-br-name").value.trim(),
+        Dia_Chi: document.getElementById("m-br-addr").value.trim(),
+        Quan_Ly: document.getElementById("m-br-mgr").value.trim(),
+        Trang_Thai: "Hoạt động"
+      });
+      closeModal();
+      const initRes = await callAPI("getInitialData", {});
+      STATE.branches = initRes.branches || [];
+      setupBranchDropdown();
+      renderUsersView();
+      showToast("Đã lưu Chi nhánh!");
+    }
+
+    // ========================================================================
+    // TIỆN ÍCH DÙNG CHUNG: COPY 1 CHẠM, XUẤT EXCEL MỌI MENU, KHÓA SỔ, ĐỔI MK
+    // ========================================================================
+    function copyText(text) {
+      if (text === undefined || text === null || text === "") return;
+      navigator.clipboard.writeText(String(text)).then(() => {
+        showToast(`📋 Đã copy: "${text}"`);
+      });
+    }
+
+    function exportCurrentMenuExcel() {
+      let dataToExport = STATE.currentData || [];
+      if (STATE.currentMenu === "catalog") {
+        dataToExport = STATE.catalogTab === "products" ? STATE.products : STATE.boms;
+      } else if (STATE.currentMenu === "users") {
+        dataToExport = STATE.userTab === "users" ? STATE.usersList : STATE.branches;
+      }
+
+      if (!dataToExport || dataToExport.length === 0) {
+        return showToast("Không có dữ liệu trên màn hình để xuất Excel!", true);
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, STATE.currentMenu.toUpperCase());
+      const fileName = `ASMART_${STATE.currentMenu.toUpperCase()}_${getTodayISO()}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showToast("Đã xuất file Excel: " + fileName);
+    }
+
+    async function toggleLock(sheetName, idField, id, lockStatus) {
+      const res = await callAPI("toggleLockRecord", { sheetName, idField, id, lockStatus });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    async function deleteRow(sheetName, idField, id) {
+      if (!confirm("Bạn có chắc chắn muốn xóa dòng dữ liệu này?")) return;
+      const res = await callAPI("deleteRecord", {
+        sheetName,
+        idField,
+        id,
+        isAdmin: isAdminOrAccountant()
+      });
+      showToast(res.message);
+      reloadCurrentMenu();
+    }
+
+    function openChangePassModal() {
+      showModal(
+        "Đổi mật khẩu cá nhân",
+        `
+          <div class="form-row">
+            <label>Mật khẩu hiện tại</label>
+            <input type="password" id="m-old-pass" class="form-control">
+          </div>
+          <div class="form-row">
+            <label>Mật khẩu mới</label>
+            <input type="password" id="m-new-pass" class="form-control">
+          </div>
+        `,
+        `<button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+         <button class="btn btn-primary" onclick="submitChangePass()">Cập nhật mật khẩu</button>`
+      );
+    }
+
+    async function submitChangePass() {
+      const oldPassword = document.getElementById("m-old-pass").value.trim();
+      const newPassword = document.getElementById("m-new-pass").value.trim();
+      if (!oldPassword || !newPassword) return showToast("Vui lòng nhập đầy đủ mật khẩu!", true);
+
+      const res = await callAPI("changePassword", {
+        userId: STATE.user.User_ID,
+        oldPassword,
+        newPassword
+      });
+      closeModal();
+      showToast(res.message);
+    }
+
+    function getSelectedSingleBranch() {
+      const b = document.getElementById("global-branch").value;
+      if (b === "ALL") {
+        showToast("Vui lòng chọn 1 Chi nhánh cụ thể ở thanh bộ lọc phía trên trước khi nhập liệu!", true);
+        return null;
+      }
+      return b;
+    }
+
+    function toggleSelectAll(masterChk, className) {
+      document.querySelectorAll("." + className).forEach(c => { c.checked = masterChk.checked; });
+    }
+
+    function getCheckedIds(className) {
+      return Array.from(document.querySelectorAll(`.${className}:checked`)).map(c => c.value);
+    }
+
+    function toggleMobileSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    function showModal(title, bodyHtml, footerHtml) {
+      document.getElementById("modal-title").textContent = title;
+      document.getElementById("modal-body").innerHTML = bodyHtml;
+      document.getElementById("modal-footer").innerHTML = footerHtml;
+      document.getElementById("app-modal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("app-modal").style.display = "none";
+    }
+
+    function setLoading(show) {
+      document.getElementById("loading-overlay").style.display = show ? "flex" : "none";
+    }
+
+    function showToast(msg, isError = false) {
+      const container = document.getElementById("toast-container");
+      const el = document.createElement("div");
+      el.className = "toast" + (isError ? " error" : "");
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => { el.remove(); }, 3200);
+    }
+
+    function formatNumber(num) {
+      return Number(num || 0).toLocaleString("vi-VN");
+    }
+  </script>
+</body>
+</html>
