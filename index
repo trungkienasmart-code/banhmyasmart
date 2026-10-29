@@ -53,7 +53,7 @@
     .login-card {
       background: #fff;
       width: 100%;
-      max-width: 410px;
+      max-width: 420px;
       border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       padding: 28px 24px;
@@ -72,6 +72,24 @@
       color: var(--text-muted);
       font-size: 13px;
       margin-top: 4px;
+    }
+    .api-status-bar {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 5px;
+      margin-bottom: 14px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .api-status-ok {
+      background: #d1e7dd;
+      color: #0f5132;
+      border: 1px solid #badbcc;
+    }
+    .api-status-warn {
+      background: #fff3cd;
+      color: #664d03;
+      border: 1px solid #ffecb5;
     }
 
     /* ================= MAIN LAYOUT ================= */
@@ -692,28 +710,37 @@
         <h1>AS MART</h1>
         <p>Hệ thống Quản lý Sản xuất, Tồn Thuế & Kiểm kê Bánh mì</p>
       </div>
-      <form id="login-form" onsubmit="submitLogin(event)">
+
+      <div id="api-status-indicator" class="api-status-bar api-status-warn">
+        ⚠️ Chưa gắn link API. Hãy bấm nút Cấu hình bên dưới!
+      </div>
+
+      <div id="login-box">
         <div class="form-row">
           <label>Tên đăng nhập</label>
-          <input type="text" id="login-username" class="form-control" placeholder="Nhập tài khoản (VD: admin)" required>
+          <input type="text" id="login-username" class="form-control" placeholder="Nhập tài khoản (VD: admin)" onkeydown="if(event.key==='Enter') submitLogin()">
         </div>
         <div class="form-row">
           <label>Mật khẩu</label>
-          <input type="password" id="login-password" class="form-control" placeholder="Nhập mật khẩu" required>
+          <input type="password" id="login-password" class="form-control" placeholder="Nhập mật khẩu (Mặc định: 123456)" onkeydown="if(event.key==='Enter') submitLogin()">
         </div>
-        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width:100%; padding:11px; margin-top:8px; font-size:15px;">
+        <button type="button" id="btn-login-submit" class="btn btn-primary" style="width:100%; padding:11px; margin-top:8px; font-size:15px;" onclick="submitLogin()">
           <i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP HỆ THỐNG
         </button>
-      </form>
+      </div>
 
       <div style="margin-top:16px; text-align:center; border-top:1px solid #eee; padding-top:12px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="toggleApiConfigBox()">
           <i class="fa-solid fa-gear"></i> Cấu hình kết nối API (Apps Script URL)
         </button>
         <div id="api-config-box" style="display:none; margin-top:10px; text-align:left;">
-          <label style="font-size:12px; font-weight:bold;">Link Web App Google Apps Script:</label>
+          <label style="font-size:12px; font-weight:bold;">Dán Link Web App Google Apps Script (đuôi /exec):</label>
           <input type="text" id="input-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="margin-top:4px;">
-          <button type="button" class="btn btn-success btn-sm" style="margin-top:6px; width:100%;" onclick="saveApiUrl()">Lưu URL Kết nối</button>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="button" class="btn btn-success btn-sm" style="flex:1;" onclick="saveApiUrl()">
+              <i class="fa-solid fa-check"></i> Lưu & Kiểm tra kết nối
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -754,6 +781,7 @@
         <li data-menu="inventory"><a onclick="switchMenu('inventory')"><i class="fa-solid fa-clipboard-check"></i> Kiểm kê & Hao hụt</a></li>
         <li data-menu="catalog"><a onclick="switchMenu('catalog')"><i class="fa-solid fa-boxes-stacked"></i> Danh mục & BOM</a></li>
         <li data-menu="users"><a onclick="switchMenu('users')"><i class="fa-solid fa-users-gear"></i> Người dùng & Quyền</a></li>
+        <li data-menu="guide"><a onclick="switchMenu('guide')"><i class="fa-solid fa-circle-question"></i> Hướng dẫn sử dụng</a></li>
       </ul>
 
       <div class="sidebar-footer">
@@ -828,14 +856,26 @@
   <script>
     /**
      * ========================================================================
-     * CẤU HÌNH LINK WEB APP GOOGLE APPS SCRIPT TẠI ĐÂY
+     * DÁN LINK WEB APP GOOGLE APPS SCRIPT (ĐUÔI /exec) VÀO DÒNG DƯỚI ĐÂY
+     * ĐỂ TOÀN BỘ CHI NHÁNH MỞ LINK GITHUB LÊN LÀ DÙNG ĐƯỢC NGAY:
      * ========================================================================
      */
     const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwhz1xmpaZVZWJ0Te95akAOdkScHsKhuiZVzHzdNBFcIwNkaD6tXp_LyhDRQE7WeRPITQ/exec";
 
-    // State toàn cục
+    function resolveInitialApiUrl() {
+      // Nếu bạn đã dán link vào DEFAULT_API_URL trong code thì ưu tiên dùng luôn
+      if (DEFAULT_API_URL && DEFAULT_API_URL.startsWith("https://script.google.com")) {
+        return DEFAULT_API_URL.trim();
+      }
+      const saved = localStorage.getItem("ASMART_BAKERY_API_URL") || "";
+      if (saved.startsWith("https://script.google.com") && !saved.includes("THAY_LINK_WEB_APP")) {
+        return saved.trim();
+      }
+      return "";
+    }
+
     let STATE = {
-      apiUrl: localStorage.getItem("ASMART_BAKERY_API_URL") || DEFAULT_API_URL,
+      apiUrl: resolveInitialApiUrl(),
       user: JSON.parse(localStorage.getItem("ASMART_BAKERY_USER") || "null"),
       branches: [],
       products: [],
@@ -844,11 +884,10 @@
       currentData: [],
       dashboardData: null,
       usersList: [],
-      // Sub-mode cho các menu có nhiều tab
-      prodViewMode: "quick", // 'quick' (Nhập nhanh) | 'list' (Danh sách mẻ) | 'summary' (Tổng hợp nhập Daisy)
-      invGroupTab: "Thành phẩm", // 'Thành phẩm' | 'NVL' | 'VTTH' | 'report'
-      catalogTab: "products", // 'products' | 'boms'
-      userTab: "users", // 'users' | 'branches'
+      prodViewMode: "quick",
+      invGroupTab: "Thành phẩm",
+      catalogTab: "products",
+      userTab: "users",
       selectedQuickProduct: null,
       isSubmitting: false
     };
@@ -862,10 +901,10 @@
       { id: "wastes", name: "Hủy hàng" },
       { id: "inventory", name: "Kiểm kê & Hao hụt" },
       { id: "catalog", name: "Danh mục & Định mức BOM" },
-      { id: "users", name: "Người dùng & Phân quyền" }
+      { id: "users", name: "Người dùng & Phân quyền" },
+      { id: "guide", name: "Hướng dẫn sử dụng nhanh (SOP)" }
     ];
 
-    // Khởi tạo ngày & tháng hiện tại theo giờ Việt Nam
     function getTodayISO() {
       const now = new Date();
       const offset = now.getTimezoneOffset() * 60000;
@@ -876,18 +915,31 @@
       document.getElementById("global-date").value = getTodayISO();
       document.getElementById("global-month").value = getTodayISO().slice(0, 7);
       document.getElementById("input-api-url").value = STATE.apiUrl;
+      updateApiStatusIndicator();
 
-      if (STATE.user) {
+      if (STATE.user && STATE.apiUrl) {
         initLoggedInSession();
       }
     });
 
+    function updateApiStatusIndicator() {
+      const box = document.getElementById("api-status-indicator");
+      if (STATE.apiUrl && STATE.apiUrl.startsWith("https://script.google.com")) {
+        box.className = "api-status-bar api-status-ok";
+        box.innerHTML = "✅ Đã kết nối đường dẫn API Apps Script sẵn sàng!";
+      } else {
+        box.className = "api-status-bar api-status-warn";
+        box.innerHTML = "⚠️ Chưa cấu hình link API Web App. Hãy bấm nút Cấu hình bên dưới!";
+        document.getElementById("api-config-box").style.display = "block";
+      }
+    }
+
     // ========================================================================
-    // KẾT NỐI API BACKEND (VƯỢT CORS GITHUB PAGES BẰNG TEXT/PLAIN)
+    // KẾT NỐI API BACKEND
     // ========================================================================
     async function callAPI(action, payload = {}, showLoader = true) {
-      if (!STATE.apiUrl || STATE.apiUrl.includes("THAY_LINK_WEB_APP")) {
-        showToast("Vui lòng bấm 'Cấu hình kết nối API' và dán link Web App Google Apps Script!", true);
+      if (!STATE.apiUrl || !STATE.apiUrl.startsWith("https://script.google.com")) {
+        showToast("Vui lòng dán link Web App Google Apps Script vào mục Cấu hình API!", true);
         toggleApiConfigBox(true);
         throw new Error("Chưa cấu hình API URL");
       }
@@ -896,10 +948,18 @@
       try {
         const res = await fetch(STATE.apiUrl, {
           method: "POST",
+          redirect: "follow",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action, payload })
         });
-        const json = await res.json();
+        const text = await res.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (parseErr) {
+          throw new Error("Phản hồi từ Google Script không đúng định dạng JSON. Hãy kiểm tra quyền Triển khai (Deploy -> Bất kỳ ai / Anyone).");
+        }
+
         if (json.status === "error") {
           showToast(json.message || "Có lỗi xảy ra!", true);
           throw new Error(json.message);
@@ -920,29 +980,33 @@
       box.style.display = (forceOpen || box.style.display === "none") ? "block" : "none";
     }
 
-    function saveApiUrl() {
+    async function saveApiUrl() {
       const val = document.getElementById("input-api-url").value.trim();
-      if (!val.startsWith("https://script.google.com")) {
-        return showToast("Link Web App không hợp lệ! Phải bắt đầu bằng https://script.google.com...", true);
+      if (!val.startsWith("https://script.google.com") || !val.endsWith("/exec")) {
+        return showToast("Link Web App phải bắt đầu bằng https://script.google.com... và kết thúc bằng /exec", true);
       }
       STATE.apiUrl = val;
       localStorage.setItem("ASMART_BAKERY_API_URL", val);
-      showToast("Đã lưu cấu hình API thành công!");
+      updateApiStatusIndicator();
       document.getElementById("api-config-box").style.display = "none";
+      showToast("Đã lưu link API! Bạn có thể bấm Đăng nhập ngay.");
     }
 
     // ========================================================================
-    // ĐĂNG NHẬP, PHÂN QUYỀN & KHỞI TẠO PHIÊN LÀM VIỆC
+    // ĐĂNG NHẬP & PHÂN QUYỀN
     // ========================================================================
-    async function submitLogin(e) {
-      e.preventDefault();
+    async function submitLogin() {
       if (STATE.isSubmitting) return;
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value.trim();
+
+      if (!username || !password) {
+        return showToast("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!", true);
+      }
+
       STATE.isSubmitting = true;
       try {
-        const username = document.getElementById("login-username").value.trim();
-        const password = document.getElementById("login-password").value.trim();
         const res = await callAPI("login", { username, password });
-
         STATE.user = res.user;
         STATE.branches = res.branches || [];
         STATE.products = res.products || [];
@@ -952,7 +1016,7 @@
         showToast("Xin chào " + STATE.user.Ho_Ten + "!");
         initLoggedInSession();
       } catch (err) {
-        // Đã báo toast trong callAPI
+        // Đã hiển thị thông báo lỗi
       } finally {
         STATE.isSubmitting = false;
       }
@@ -962,13 +1026,11 @@
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("app-container").style.display = "block";
 
-      // Hiển thị thông tin User trên Sidebar
       document.getElementById("ui-user-fullname").textContent = STATE.user.Ho_Ten;
       document.getElementById("ui-user-role").textContent = STATE.user.Vai_Tro;
       document.getElementById("ui-user-branch").textContent = STATE.user.Chi_Nhanh_Phu_Trach;
       document.getElementById("mobile-branch-label").textContent = STATE.user.Chi_Nhanh_Phu_Trach;
 
-      // Nếu refresh trang thì tải lại danh mục mới nhất
       if (STATE.products.length === 0) {
         try {
           const initRes = await callAPI("getInitialData", {});
@@ -981,7 +1043,6 @@
       setupBranchDropdown();
       applyMenuPermissions();
 
-      // Mặc định: Nhân viên sản xuất vào thẳng màn hình Nhập nhanh Sản xuất; vị trí khác vào Dashboard
       if (STATE.user.Vai_Tro === "Nhân viên sản xuất") {
         STATE.prodViewMode = "quick";
         switchMenu("production");
@@ -997,7 +1058,9 @@
       if (STATE.user.Vai_Tro === "Admin" || STATE.user.Menu_Quyen === "ALL") {
         return ALL_MENUS.map(m => m.id);
       }
-      return String(STATE.user.Menu_Quyen || "").split(",").map(s => s.trim()).filter(Boolean);
+      const list = String(STATE.user.Menu_Quyen || "").split(",").map(s => s.trim()).filter(Boolean);
+      if (!list.includes("guide")) list.push("guide");
+      return list;
     }
 
     function applyMenuPermissions() {
@@ -1045,7 +1108,7 @@
     }
 
     // ========================================================================
-    // ĐIỀU HƯỚNG MENU CHÍNH
+    // ĐIỀU HƯỚNG MENU
     // ========================================================================
     function switchMenu(menuId) {
       const allowed = getAllowedMenus();
@@ -1056,7 +1119,6 @@
       STATE.currentMenu = menuId;
       document.getElementById("sidebar").classList.remove("open");
 
-      // Active state trên Sidebar & Bottom Nav
       document.querySelectorAll("#sidebar-menu-list li a").forEach(a => a.classList.remove("active"));
       const activeLi = document.querySelector(`#sidebar-menu-list li[data-menu="${menuId}"] a`);
       if (activeLi) activeLi.classList.add("active");
@@ -1068,12 +1130,11 @@
       const menuObj = ALL_MENUS.find(m => m.id === menuId);
       document.getElementById("breadcrumb-current").textContent = menuObj ? menuObj.name : menuId;
 
-      // Ẩn/hiện bộ lọc Ngày hoặc Tháng tùy theo menu
       const filterCard = document.getElementById("global-filter-card");
       const dateWrap = document.getElementById("filter-date-wrap");
       const monthWrap = document.getElementById("filter-month-wrap");
 
-      if (menuId === "catalog" || menuId === "users") {
+      if (menuId === "catalog" || menuId === "users" || menuId === "guide") {
         filterCard.style.display = "none";
       } else {
         filterCard.style.display = "block";
@@ -1094,6 +1155,11 @@
       const date = document.getElementById("global-date").value;
       const month = document.getElementById("global-month").value;
       const m = STATE.currentMenu;
+
+      if (m === "guide") {
+        renderActiveViewTable();
+        return;
+      }
 
       try {
         if (m === "dashboard") {
@@ -1142,6 +1208,7 @@
       else if (m === "inventory") renderInventoryView();
       else if (m === "catalog") renderCatalogView();
       else if (m === "users") renderUsersView();
+      else if (m === "guide") renderGuideView();
     }
 
     function filterBySearchKeyword(list, fields) {
@@ -1151,7 +1218,7 @@
     }
 
     // ========================================================================
-    // VIEW 1: DASHBOARD TỔNG QUAN & CẢNH BÁO VƯỢT TRẦN TỒN THUẾ AMIS
+    // VIEW 1: DASHBOARD TỔNG QUAN
     // ========================================================================
     function renderDashboardView() {
       const container = document.getElementById("menu-view-container");
@@ -1259,7 +1326,7 @@
     }
 
     // ========================================================================
-    // VIEW 2: KẾ HOẠCH SẢN XUẤT ĐẦU NGÀY (ĐẢM BẢO TỒN KHO THUẾ AMIS)
+    // VIEW 2: KẾ HOẠCH SẢN XUẤT ĐẦU NGÀY
     // ========================================================================
     function renderPlansView() {
       const container = document.getElementById("menu-view-container");
@@ -1272,7 +1339,7 @@
             <button class="btn btn-warning" onclick="copyPlanYesterday()">
               <i class="fa-solid fa-copy"></i> Sao chép từ hôm qua
             </button>
-            <button class="btn btn-primary" onclick="openPlanModal()">
+            <button class="btn btn-primary" onclick="openPlanModalById('')">
               <i class="fa-solid fa-circle-plus"></i> + Thêm Kế hoạch bánh
             </button>
             ${canInputDataEntry() ? `
@@ -1334,7 +1401,7 @@
                           ${isLocked ? `<i class="fa-solid fa-lock" title="Đã khóa dữ liệu" style="color:#6c757d; margin-left:4px;"></i>` : ''}
                         </td>
                         <td>
-                          <button class="btn btn-sm btn-primary" title="Sửa / Bổ sung" onclick='openPlanModal(${JSON.stringify(r)})'><i class="fa-solid fa-pen-to-square"></i></button>
+                          <button class="btn btn-sm btn-primary" title="Sửa / Bổ sung" onclick="openPlanModalById('${r.Plan_ID}')"><i class="fa-solid fa-pen-to-square"></i></button>
                           ${isAdminOrAccountant() ? `
                             <button class="btn btn-sm btn-warning" title="Khóa / Mở khóa" onclick="toggleLock('PLANS','Plan_ID','${r.Plan_ID}', ${isLocked ? 0 : 1})">
                               <i class="fa-solid ${isLocked ? 'fa-lock-open' : 'fa-lock'}"></i>
@@ -1354,7 +1421,8 @@
       `;
     }
 
-    function openPlanModal(editItem = null) {
+    function openPlanModalById(planId) {
+      const editItem = planId ? STATE.currentData.find(x => x.Plan_ID === planId) : null;
       const branch = editItem ? editItem.Ma_CN : getSelectedSingleBranch();
       if (!branch) return;
 
@@ -1454,19 +1522,17 @@
     }
 
     // ========================================================================
-    // VIEW 3: SẢN XUẤT THỰC TẾ (CHẾ ĐỘ QUICK-TAP CHO THỢ BÁNH & BẢNG NHẬP DAISY)
+    // VIEW 3: SẢN XUẤT THỰC TẾ (QUICK-TAP & NHẬP DAISY)
     // ========================================================================
     function renderProductionView() {
       const container = document.getElementById("menu-view-container");
       const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
       const rows = filterBySearchKeyword(STATE.currentData, ["Ma_Thanh_Pham", "Ten_Thanh_Pham", "Ma_Daisy", "So_Me"]);
 
-      // Nếu chưa chọn món bánh mặc định trong Quick-Tap thì chọn món đầu tiên
       if (!STATE.selectedQuickProduct && tpList.length > 0) {
         STATE.selectedQuickProduct = tpList[0].Ma_SP;
       }
 
-      // Tính bảng tổng hợp cộng dồn theo mã bánh để Nhập liệu nhập vào Daisy cuối ngày
       const summaryByCode = {};
       rows.forEach(r => {
         if (!summaryByCode[r.Ma_Thanh_Pham]) {
@@ -1516,7 +1582,6 @@
         </div>
 
         ${STATE.prodViewMode === 'quick' ? `
-          <!-- CHẾ ĐỘ QUICK-TAP CHO THỢ BÁNH -->
           <div class="card" style="border:2px solid var(--primary);">
             <div style="font-weight:bold; font-size:15px; margin-bottom:10px; color:var(--primary);">
               <i class="fa-solid fa-hand-pointer"></i> BƯỚC 1: Chạm chọn loại bánh vừa ra lò
@@ -1554,7 +1619,6 @@
         ` : ''}
 
         ${STATE.prodViewMode === 'summary' ? `
-          <!-- BẢNG TỔNG HỢP CỘNG DỒN THEO MÃ BÁNH CHO NHẬP LIỆU DAISY -->
           <div class="card">
             <div style="margin-bottom:8px; font-size:13px; color:var(--text-muted);">
               📋 <b>Bảng tổng hợp cuối ngày cho Nhập liệu Daisy:</b> Hệ thống đã cộng dồn tất cả các mẻ trong ngày theo từng mã bánh. Bạn chỉ cần bấm vào <b>Mã Daisy</b> và <b>Tổng SL Sản xuất</b> để copy dán sang Daisy!
@@ -1594,7 +1658,7 @@
                         </td>
                         <td>
                           ${canInputDataEntry() && !s.All_Synced ? `
-                            <button class="btn btn-sm btn-success" onclick='confirmDaisyByIds(${JSON.stringify(s.Batch_IDs)})'>
+                            <button class="btn btn-sm btn-success" onclick="confirmDaisyByCode('${s.Ma_Thanh_Pham}')">
                               <i class="fa-solid fa-check"></i> Đã nhập mã này
                             </button>
                           ` : '-'}
@@ -1607,7 +1671,6 @@
           </div>
         ` : ''}
 
-        <!-- BẢNG CHI TIẾT TỪNG MẺ BÁNH RA LÒ -->
         <div class="card">
           <div style="font-weight:bold; margin-bottom:10px;">Nhật ký các mẻ bánh đã ra lò trong ngày (${rows.length} mẻ)</div>
           <div class="table-responsive">
@@ -1669,7 +1732,6 @@
       inp.value = Number(inp.value || 0) + Number(amount);
     }
 
-    // Chống bấm đúp tuyệt đối cho Thợ bánh
     async function submitQuickProduction() {
       if (STATE.isSubmitting) return;
       const branch = getSelectedSingleBranch();
@@ -1712,6 +1774,11 @@
       await confirmDaisyByIds(ids);
     }
 
+    async function confirmDaisyByCode(maTP) {
+      const ids = STATE.currentData.filter(r => r.Ma_Thanh_Pham === maTP).map(r => r.Prod_ID);
+      if (ids.length > 0) await confirmDaisyByIds(ids);
+    }
+
     async function confirmDaisyByIds(ids) {
       const res = await callAPI("updateProdStatusDaisy", {
         ids,
@@ -1723,7 +1790,7 @@
     }
 
     // ========================================================================
-    // VIEW 4: NGHIỆP VỤ CHUYỂN LOẠI (BÁNH A -> BÁNH B, KHÔNG CẦN QUẢN LÝ DUYỆT)
+    // VIEW 4: CHUYỂN LOẠI BÁNH
     // ========================================================================
     function renderConversionsView() {
       const container = document.getElementById("menu-view-container");
@@ -1884,7 +1951,7 @@
     }
 
     // ========================================================================
-    // VIEW 5: NGHIỆP VỤ THANH LÝ CUỐI NGÀY (KHÔNG CẦN NHẬP DOANH THU THỰC)
+    // VIEW 5: THANH LÝ CUỐI NGÀY
     // ========================================================================
     function renderLiquidationsView() {
       const container = document.getElementById("menu-view-container");
@@ -2015,7 +2082,7 @@
     }
 
     // ========================================================================
-    // VIEW 6: NGHIỆP VỤ HỦY HÀNG (NHẬP LIỆU DỰA VÀO ĐÂY LẬP XUẤT HỦY DAISY)
+    // VIEW 6: HỦY HÀNG (XUẤT HỦY DAISY)
     // ========================================================================
     function renderWastesView() {
       const container = document.getElementById("menu-view-container");
@@ -2180,14 +2247,13 @@
     }
 
     // ========================================================================
-    // VIEW 7: KIỂM KÊ (UPLOAD TỒN SỔ SÁCH + NHẬP NHANH 3 NHÓM + BÁO CÁO HAO HỤT)
+    // VIEW 7: KIỂM KÊ & TÍNH HAO HỤT BOM
     // ========================================================================
     function renderInventoryView() {
       const container = document.getElementById("menu-view-container");
       const month = document.getElementById("global-month").value;
       const branch = document.getElementById("global-branch").value;
 
-      // Nếu kỳ kiểm kê chưa có dữ liệu trong INVENTORY thì kết hợp danh mục PRODUCTS để nhân viên vẫn đếm trước được
       let displayList = [...STATE.currentData];
       if (displayList.length === 0 && branch !== "ALL") {
         displayList = STATE.products.map(p => ({
@@ -2236,7 +2302,6 @@
           </div>
         </div>
 
-        <!-- 3 NHÓM NHẬP NHANH CHO ĐIỆN THOẠI + TAB BÁO CÁO TỔNG HỢP -->
         <div class="sub-tabs">
           <button class="sub-tab-btn ${STATE.invGroupTab === 'Thành phẩm' ? 'active' : ''}" onclick="STATE.invGroupTab='Thành phẩm'; renderInventoryView();">
             🥖 1. Nhập nhanh Thành phẩm
@@ -2253,7 +2318,6 @@
         </div>
 
         ${STATE.invGroupTab !== 'report' ? `
-          <!-- BẢNG NHẬP NHANH THEO 3 NHÓM CHO NHÂN VIÊN SX / QUẢN LÝ / NHẬP LIỆU -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
               <div style="font-weight:bold; color:var(--primary); font-size:15px;">
@@ -2277,7 +2341,7 @@
                 </thead>
                 <tbody>
                   ${groupRows.length === 0 ? `<tr><td colspan="6" style="text-align:center; padding:18px;">Chưa có mặt hàng nào thuộc nhóm này.</td></tr>` :
-                    groupRows.map((r, i) => `
+                    groupRows.map(r => `
                       <tr class="inv-input-row"
                           data-inv-id="${r.Inv_ID || ''}"
                           data-masp="${r.Ma_SP}"
@@ -2307,7 +2371,6 @@
             </div>
           </div>
         ` : `
-          <!-- BÁO CÁO ĐỐI CHIẾU KIỂM KÊ & TÍNH THẤT THOÁT ĐỊNH MỨC BOM -->
           <div class="card">
             <div style="margin-bottom:10px; font-size:13px; color:var(--text-muted);">
               📌 <b>Công thức tự động:</b> Hệ thống tự động quét tổng số bánh thực tế sản xuất trong kỳ nhân với <b>Định mức BOM</b> và cộng/trừ <b>Chuyển loại, Hủy hàng</b> để tính ra Tồn lý thuyết & Chênh lệch thất thoát.
@@ -2403,7 +2466,6 @@
       }
     }
 
-    // Đọc file Excel Tồn sổ sách (Mã, Tên, ĐVT, Số lượng tồn, Đơn giá)
     function handleFileUploadBookInventory(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -2426,7 +2488,6 @@
             return showToast("File Excel trống!", true);
           }
 
-          // Map cột linh hoạt (hỗ trợ cả tiếng Việt có dấu và không dấu)
           const parsedItems = jsonRows.map(r => {
             const keys = Object.keys(r);
             const findCol = (patterns) => {
@@ -2489,7 +2550,7 @@
     }
 
     // ========================================================================
-    // VIEW 8: DANH MỤC HÀNG HÓA & ĐỊNH MỨC CÔNG THỨC (BOM)
+    // VIEW 8: DANH MỤC & ĐỊNH MỨC BOM
     // ========================================================================
     function renderCatalogView() {
       const container = document.getElementById("menu-view-container");
@@ -2502,11 +2563,11 @@
               <i class="fa-solid fa-file-excel"></i> Xuất Excel Danh mục / BOM
             </button>
             ${STATE.catalogTab === 'products' ? `
-              <button class="btn btn-primary" onclick="openProductModal()">
+              <button class="btn btn-primary" onclick="openProductModalByCode('')">
                 <i class="fa-solid fa-circle-plus"></i> + Thêm Mã hàng mới
               </button>
             ` : `
-              <button class="btn btn-primary" onclick="openBOMModal()">
+              <button class="btn btn-primary" onclick="openBOMModalById('')">
                 <i class="fa-solid fa-circle-plus"></i> + Thêm dòng Định mức BOM
               </button>
             `}
@@ -2553,7 +2614,7 @@
                       <td>${formatNumber(p.Don_Gia_Von || 0)}</td>
                       <td>${formatNumber(p.Gia_Ban || 0)}</td>
                       <td>
-                        <button class="btn btn-sm btn-primary" onclick='openProductModal(${JSON.stringify(p)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-primary" onclick="openProductModalByCode('${p.Ma_SP}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteProduct','${p.Ma_SP}')"><i class="fa-solid fa-trash"></i></button>
                       </td>
                     </tr>
@@ -2593,7 +2654,7 @@
                       <td><b style="color:var(--primary);">${b.SL_Dinh_Muc}</b></td>
                       <td>${b.Ghi_Chu || '-'}</td>
                       <td>
-                        <button class="btn btn-sm btn-primary" onclick='openBOMModal(${JSON.stringify(b)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-primary" onclick="openBOMModalById('${b.BOM_ID}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteBOM','${b.BOM_ID}')"><i class="fa-solid fa-trash"></i></button>
                       </td>
                     </tr>
@@ -2606,7 +2667,8 @@
       `;
     }
 
-    function openProductModal(p = null) {
+    function openProductModalByCode(maSP) {
+      const p = maSP ? STATE.products.find(x => x.Ma_SP === maSP) : null;
       showModal(
         p ? "Cập nhật Hàng hóa" : "Thêm Mã Hàng hóa mới",
         `
@@ -2672,7 +2734,8 @@
       reloadCurrentMenu();
     }
 
-    function openBOMModal(b = null) {
+    function openBOMModalById(bomId) {
+      const b = bomId ? STATE.boms.find(x => x.BOM_ID === bomId) : null;
       const tpList = STATE.products.filter(p => p.Phan_Loai === "Thành phẩm");
       const nvlList = STATE.products.filter(p => p.Phan_Loai !== "Thành phẩm");
 
@@ -2692,7 +2755,7 @@
             </select>
           </div>
           <div class="form-row">
-            <label>Số lượng định mức tiêu hao cho 1 đơn vị bánh (VD: 0.06 Kg)</label>
+            <label>Số lượng định mức tiêu hao cho 1 đơn vị bánh (VD: 0.05 Kg)</label>
             <input type="number" step="0.0001" id="m-bom-qty" class="form-control" value="${b ? b.SL_Dinh_Muc : ''}">
           </div>
           <div class="form-row">
@@ -2738,7 +2801,7 @@
     }
 
     // ========================================================================
-    // VIEW 9: QUẢN LÝ NGƯỜI DÙNG, PHÂN QUYỀN MENU & CHI NHÁNH
+    // VIEW 9: QUẢN LÝ NGƯỜI DÙNG & CHI NHÁNH
     // ========================================================================
     function renderUsersView() {
       const container = document.getElementById("menu-view-container");
@@ -2748,11 +2811,11 @@
           <div class="page-title"><i class="fa-solid fa-users-gear"></i> Quản lý Người dùng, Phân quyền Menu & Chi nhánh</div>
           <div class="header-actions">
             ${STATE.userTab === 'users' ? `
-              <button class="btn btn-primary" onclick="openUserModal()">
+              <button class="btn btn-primary" onclick="openUserModalById('')">
                 <i class="fa-solid fa-user-plus"></i> + Thêm Người dùng mới
               </button>
             ` : `
-              <button class="btn btn-primary" onclick="openBranchModal()">
+              <button class="btn btn-primary" onclick="openBranchModalByCode('')">
                 <i class="fa-solid fa-store"></i> + Thêm Chi nhánh mới
               </button>
             `}
@@ -2795,7 +2858,7 @@
                       <td style="font-size:12px; max-width:260px;">${u.Menu_Quyen}</td>
                       <td><span class="badge ${u.Trang_Thai === 'Hoạt động' ? 'badge-approved' : 'badge-danger'}">${u.Trang_Thai}</span></td>
                       <td>
-                        <button class="btn btn-sm btn-primary" onclick='openUserModal(${JSON.stringify(u)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-primary" onclick="openUserModalById('${u.User_ID}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn btn-sm btn-danger" onclick="deleteCatalogItem('deleteUser','${u.User_ID}')"><i class="fa-solid fa-trash"></i></button>
                       </td>
                     </tr>
@@ -2827,7 +2890,7 @@
                       <td>${b.Quan_Ly || '-'}</td>
                       <td><span class="badge badge-approved">${b.Trang_Thai}</span></td>
                       <td>
-                        <button class="btn btn-sm btn-primary" onclick='openBranchModal(${JSON.stringify(b)})'><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-sm btn-primary" onclick="openBranchModalByCode('${b.Ma_CN}')"><i class="fa-solid fa-pen"></i></button>
                       </td>
                     </tr>
                   `).join("")}
@@ -2839,9 +2902,10 @@
       `;
     }
 
-    function openUserModal(u = null) {
+    function openUserModalById(userId) {
+      const u = userId ? STATE.usersList.find(x => x.User_ID === userId) : null;
       const roles = ["Nhân viên sản xuất", "Quản lý", "Nhập liệu", "Kế toán", "Giám đốc siêu thị", "Admin"];
-      const userMenus = u ? (u.Menu_Quyen === "ALL" ? ALL_MENUS.map(m => m.id) : String(u.Menu_Quyen).split(",").map(s => s.trim())) : ["plans", "production", "conversions", "liquidations", "wastes", "inventory"];
+      const userMenus = u ? (u.Menu_Quyen === "ALL" ? ALL_MENUS.map(m => m.id) : String(u.Menu_Quyen).split(",").map(s => s.trim())) : ["plans", "production", "conversions", "liquidations", "wastes", "inventory", "guide"];
 
       showModal(
         u ? "Cập nhật Người dùng & Phân quyền" : "Thêm Người dùng mới",
@@ -2911,7 +2975,8 @@
       reloadCurrentMenu();
     }
 
-    function openBranchModal(b = null) {
+    function openBranchModalByCode(maCN) {
+      const b = maCN ? STATE.branches.find(x => x.Ma_CN === maCN) : null;
       showModal(
         b ? "Cập nhật Chi nhánh" : "Thêm Chi nhánh mới",
         `
@@ -2954,7 +3019,61 @@
     }
 
     // ========================================================================
-    // TIỆN ÍCH DÙNG CHUNG: COPY 1 CHẠM, XUẤT EXCEL MỌI MENU, KHÓA SỔ, ĐỔI MK
+    // VIEW 10: HƯỚNG DẪN SỬ DỤNG NHANH (SOP VẬN HÀNH & KIỂM KÊ)
+    // ========================================================================
+    function renderGuideView() {
+      const container = document.getElementById("menu-view-container");
+      container.innerHTML = `
+        <div class="page-header">
+          <div class="page-title"><i class="fa-solid fa-circle-question"></i> Hướng dẫn Sử dụng Nhanh (SOP Vận hành & Kiểm kê)</div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--primary);">
+          <h3 style="color:var(--primary); margin-bottom:8px;">1. Quản lý Chi nhánh (Lập kế hoạch & Giám sát)</h3>
+          <ul style="padding-left:20px; line-height:1.7;">
+            <li><b>Trước 07h15 sáng:</b> Vào menu <b>Kế hoạch (Tồn AMIS)</b> ➔ Bấm <b>"Sao chép từ hôm qua"</b> ➔ Chỉnh lại số lượng dự kiến bán trong ngày rồi bấm Lưu.</li>
+            <li><b>Trong ngày:</b> Nếu thấy dòng bánh nào báo đỏ <b>"Vượt KH"</b>, bấm sửa kế hoạch để nhập thêm vào ô <b>Số lượng Bổ sung</b> và nhắc Nhập liệu đẩy thêm Lệnh SX lên AMIS Thuế.</li>
+            <li><b>Cuối tháng:</b> Phối hợp kiểm kê và nhập lý do vào cột <b>Giải trình chênh lệch</b> trong menu Kiểm kê.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--success);">
+          <h3 style="color:var(--success); margin-bottom:8px;">2. Nhân viên Sản xuất - Thợ bánh (Dùng trên Điện thoại)</h3>
+          <ul style="padding-left:20px; line-height:1.7;">
+            <li><b>Khi ra lò mẻ bánh:</b> Mở mục <b>Sản xuất ➔ 1. Nhập nhanh tại lò</b> ➔ Chạm chọn tên bánh ➔ Bấm số lượng (+5, +10, +20...) ➔ Bấm <b>"LƯU MẺ BÁNH NGAY"</b>.</li>
+            <li><b>Khi chuyển loại (Bánh A sang Bánh B):</b> Vào mục <b>Chuyển loại</b> ➔ Chọn bánh gốc xuất ra và bánh mới thu hồi ➔ Bấm Lưu (không cần chờ duyệt).</li>
+            <li><b>Khi thanh lý / hủy hàng:</b> Vào mục <b>Thanh lý</b> (chỉ nhập số lượng & hình thức, không cần nhập doanh thu) hoặc <b>Hủy hàng</b> để báo ngay khi phát sinh.</li>
+            <li><b>Khi kiểm kê cuối tháng:</b> Vào mục <b>Kiểm kê</b> ➔ Chọn lần lượt 3 nhóm (<b>Thành phẩm, NVL, VTTH</b>) ➔ Gõ số đếm thực tế và bấm <b>Lưu số đếm thực tế</b>.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--warning);">
+          <h3 style="color:#b45309; margin-bottom:8px;">3. Nhân viên Nhập liệu Chi nhánh (Đồng bộ AMIS & Daisy)</h3>
+          <ul style="padding-left:20px; line-height:1.7;">
+            <li><b>07h30 sáng (và khi có bổ sung):</b> Vào <b>Kế hoạch (Tồn AMIS)</b> ➔ Bấm vào <b>Mã AMIS</b> và <b>Tổng KH</b> để copy nhanh sang AMIS Thuế lập Lệnh SX ➔ Tích chọn và bấm <b>"Xác nhận Đã đẩy AMIS"</b>.</li>
+            <li><b>Cuối ngày / Sáng D+1:</b>
+              <br>- Vào <b>Sản xuất ➔ 2. Tổng hợp theo Mã để nhập Daisy</b>: Copy <b>Mã Daisy</b> và <b>Tổng SL Sản xuất</b> dán vào Daisy ➔ Bấm <b>"Đã nhập mã này"</b>.
+              <br>- Vào <b>Hủy hàng</b>: Copy các dòng chờ xuất hủy để lập phiếu xuất hủy trên Daisy ➔ Bấm <b>"Xác nhận Đã xuất hủy Daisy"</b>.
+            </li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--danger);">
+          <h3 style="color:var(--danger); margin-bottom:8px;">4. Bộ phận Kế toán (Quản lý BOM & Chốt Kiểm kê cuối tháng)</h3>
+          <ul style="padding-left:20px; line-height:1.7;">
+            <li><b>Quản lý mã & công thức:</b> Vào <b>Danh mục & BOM</b> để cập nhật Mã Daisy, Mã AMIS và định mức tiêu hao NVL/VTTH cho từng loại bánh.</li>
+            <li><b>Kiểm kê cuối tháng:</b>
+              <br>1. Vào <b>Kiểm kê & Hao hụt</b> ➔ Chọn Kỳ tháng & Chi nhánh ➔ Bấm <b>"Upload Excel Tồn Sổ Sách"</b> (gồm Mã, Tên, ĐVT, Số lượng tồn, Đơn giá).
+              <br>2. Hệ thống tự động lấy tổng bánh SX thực tế nhân với BOM và trừ Chuyển loại/Hủy hàng để tính <b>Tồn Lý thuyết & Chênh lệch</b>.
+              <br>3. Kiểm tra tab <b>4. Báo cáo Kiểm kê Toàn diện</b>, xuất Excel trình ký, xử lý chuyển loại/hủy 1 lần trên AMIS Thuế và bấm <b>"Chốt & Khóa Kỳ Kiểm kê"</b>.
+            </li>
+          </ul>
+        </div>
+      `;
+    }
+
+    // ========================================================================
+    // TIỆN ÍCH DÙNG CHUNG
     // ========================================================================
     function copyText(text) {
       if (text === undefined || text === null || text === "") return;
